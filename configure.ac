@@ -9,9 +9,7 @@ AC_ARG_WITH([custom],
         [use a custom dataset @<:@default: don't@:>@])],
     [custom=${withval}], [custom=no])
 
-if test "x$custom" != "xno" ; then
-  AM_PATH_PYTHON([2.7])
-fi
+AM_PATH_PYTHON([2.7])
 
 if test "x$nsrl" != "xno" && test "x$custom" != "xno" ; then
     AC_MSG_ERROR([The --with-nsrl and --with-custom flags are mutually exclusive.]);

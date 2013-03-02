@@ -1787,7 +1787,6 @@ else
 fi
 
 
-if test "x$custom" != "xno" ; then
 
 
 
@@ -1974,7 +1973,6 @@ echo "${ECHO_T}$am_cv_python_pyexecdir" >&6; }
   fi
 
 
-fi
 
 if test "x$nsrl" != "xno" && test "x$custom" != "xno" ; then
     { { echo "$as_me:$LINENO: error: The --with-nsrl and --with-custom flags are mutually exclusive." >&5

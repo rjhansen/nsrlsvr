@@ -52,13 +52,9 @@
 #include <fstream>
 #include <vector>
 #include <memory>
-
-/* Additional defines necessary on Linux: */
-#ifdef __linux__
-#include <cstring> // for memset
-#include <cstdio> // for stderr
-#include <unistd.h> // for close, fork, chdir (Fedora only)
-#endif
+#include <cstring>
+#include <cstdio>
+#include <unistd.h>
 
 /* Additional defines necessary on FreeBSD: */
 /* Necessary for sockaddr and sockaddr_in structures */
@@ -81,8 +77,11 @@ using std::remove_if;
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 #define WARN LOG_MAKEPRI(LOG_USER, LOG_WARNING)
 #define DEBUG LOG_MAKEPRI(LOG_USER, LOG_DEBUG)
+#define CRITICAL LOG_MAKEPRI(LOG_USER, LOG_CRIT)
+#define ALERT LOG_MAKEPRI(LOG_USER, LOG_ALERT)
+#define EMERGENCY LOG_MAKEPRI(LOG_USER, LOG_EMERG)
 #define MAX_PENDING_REQUESTS 20
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 128
 
 namespace {
 
@@ -141,19 +140,36 @@ struct clientinfo {
 };
 
 
-/** Determines whether a character represents a valid uppercase
+/** Determines whether a string represents a valid uppercase
   * hexadecimal digit. */
 
-bool is_hexit(char ch)
+class is_hexit : public std::unary_function<const string&, bool>
 {
-    return (ch >= '0' and ch <= '9') or (ch >= 'A' and ch <= 'F');
-}
+	public:
+	is_hexit(size_t proper_len) : plen(proper_len) {}
+	bool operator()(const string& line) const
+	{
+		if (line.size() != plen)
+			return false;
+
+		string::const_iterator iter(line.begin());
+		const string::const_iterator end(line.end());
+		while (iter != end and 
+			((*iter >= '0' and *iter <= '9') or
+			 (*iter >= 'A' and *iter <= 'F')))
+			++iter;
+		return (iter == end) ? true : false;
+	}
+	private:
+	const size_t plen;
+};
 
 /** Loads hashes from disk and stores them in a fast-accessing
   * in-memory data structure.  This will be slow. */
 void load_hashes()
 {
-    vector<char> buf(BUFFER_SIZE);
+    vector<char> buf(BUFFER_SIZE, 0);
+    uint32_t line_count(0), hash_count(0);
     ifstream infile(RDS_LOC.c_str());
 
     if (not infile.good()) {
@@ -161,6 +177,35 @@ void load_hashes()
                RDS_LOC.c_str());
         exit(EXIT_FAILURE);
     }
+
+    infile.getline(&buf[0], BUFFER_SIZE);
+    const string firstline(buf.begin(), find(buf.begin(), buf.end(), 0));
+    const size_t firstline_size = firstline.size();
+    line_count += 1;
+    hash_count += 1;
+
+    if (32 != firstline_size && 40 != firstline_size && 64 != firstline_size && 128 != firstline_size) {
+        syslog(ALERT, "hash file appears corrupt!");
+        syslog(ALERT, "error is in the first line.  Content follows:");
+        syslog(ALERT, "%s", firstline.c_str());
+        syslog(ALERT, "length of line = %d", (int)(firstline_size));
+        syslog(ALERT, "shutting down!");
+        infile.close();
+        exit(EXIT_FAILURE);
+        return;
+    }
+    is_hexit line_test(firstline_size);
+    if (! line_test(firstline)) {
+        syslog(ALERT, "hash file appears corrupt!  Loading no hashes.");
+        syslog(ALERT, "error is in the first line.  Content follows:");
+        syslog(ALERT, "%s", firstline.c_str());
+        syslog(ALERT, "content fails is-all-hexadecimal check");
+        syslog(ALERT, "shutting down!");
+        infile.close();
+        exit(EXIT_FAILURE);
+        return;
+    }
+    hash_set.insert(firstline);
 
     while (infile) {
         // Per the C++ spec, &vector<T>[loc] is guaranteed
@@ -170,31 +215,29 @@ void load_hashes()
         // vector<bool>.)
         memset(static_cast<void*>(&buf[0]), 0, BUFFER_SIZE);
         infile.getline(&buf[0], BUFFER_SIZE);
-        string line(buf.begin(), buf.end());
-        string::iterator iter(line.begin());
-        string token("");
-
-        while (iter != line.end()) {
-            string::iterator end(find(iter, line.end(), ','));
-            token = string(iter, end);
-            transform(token.begin(), token.end(), token.begin(), ::toupper);
-            token.erase(remove_if(token.begin(), 
-                    token.end(), 
-                    not1(ptr_fun(is_hexit))),
-                token.end());
-            if (32 == token.size() || 40 == token.size() || 64 == token.size()) {
-                break;
-            }
-            iter = (end == line.end() ? line.end() : end + 1);
-        }
-
-        if (32 != token.size() && 40 != token.size() && 64 != token.size()) {
+        line_count += 1;
+        const string line(buf.begin(), find(buf.begin(), buf.end(), 0));
+        if (0 == line.size()) {
             continue;
         }
-        if (hash_set.size() > 0 and hash_set.size() % 1000000 == 0) {
-            syslog(INFO, "%lu million hashes read", hash_set.size() / 1000000);
+
+        if (! line_test(line)) {
+            syslog(ALERT, "hash file appears corrupt!  Loading no hashes.");
+            syslog(ALERT, "offending line is #%d", line_count);
+            syslog(ALERT, "offending line has %d bytes", (int) line.size());
+            syslog(ALERT, "Content follows:");
+            syslog(ALERT, "%s", line.c_str());
+            syslog(ALERT, "shutting down!");
+            exit(EXIT_FAILURE);
+            return;
         }
-        hash_set.insert(token);
+        hash_count += 1;
+
+        if (0 == hash_count % 1000000) {
+            syslog(INFO, "loaded %u million hashes", hash_count / 1000000);
+        } 
+
+        hash_set.insert(line);
     }
     infile.close();
     syslog(INFO, "read in %u unique hashes",

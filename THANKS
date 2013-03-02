@@ -1,0 +1,14 @@
+* RedJack Security <http://www.redjack.com>
+  - RedJack's been kind enough to let me hack on nsrlquery during
+    business hours during lulls in work.  Thanks, guys.  It's immensely
+    appreciated.
+
+* Jesse Kornblum <jessekornblum@gmail.com>
+  - Proposed the original "you know, there ought to be a way..." that
+    led to nsrlquery
+  - helped make nsrlquery work on OS X 10.6
+  - noticed more bugs than can quickly be listed here  :)
+
+* Mark Kealiher <mkealiher@gmail.com>
+  - Early adopters get to bleed on the cutting edge, and he shed more
+    than his due.  Thanks, Mark.  Hopefully it works better now.  :)

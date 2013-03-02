@@ -1,0 +1,56 @@
+Installation instructions:
+
+1.  Decide what data set you want nsrlsvr to query against by
+    default.  Your options are:
+    
+    a.  NIST's NSRL RDS (http://http://www.nsrl.nist.gov/).
+    
+    b.  A dataset that you provide at compile-time.  For instance,
+        if you have a proprietary set of SHA-1 hashes of known 
+        malware and know you'll only ever want to use that, this is
+        the way to go.  
+
+    You may also tell nsrlsvr to use a different file by passing the
+    "-f" flag when launching the server.  This file must contain nothing
+    but MD5, SHA-1 or SHA-256 hashes, one per line in hexadecimal format,
+    with no other content on a line.  This option is mostly for developer
+    testing: most users will never touch it.
+
+
+2.  If you're compiling it using your own dataset, your dataset must
+    be in a format nsrlsvr understands.  One good way to do this is with 
+    Jesse Kornblum's md5deep tool:
+
+    $ md5deep -c [FILES] > my_dataset.txt
+
+    
+3.  Run the ./configure script, passing it one or more of:
+
+    a.  No options: if the current RDS zipfile exists in the build
+        directory, use that; otherwise, try to download it.
+    b.  --with-custom=my_set.txt: use your own dataset
+    c.  --with-nsrl=filename: use an already-downloaded NSRL RDS
+        zip file (one that lives, e.g., outside the build dir).
+        You will want to use this option if a newer NSRL RDS has
+        been released than the one nsrlsvr knows about.
+
+
+4.  Once you've completed the "make && make install" dance, an
+    executables will be installed to $PREFIX/bin: nsrlsvr, the server
+    application, which runs as a UNIX daemon
+
+
+5.  As an example of how it can be used:
+
+    $ md5deep -c /path/to/evil/files > evil_dataset.txt
+    $ ./configure --with-custom=evil_dataset.txt
+    $ make
+    $ sudo make install
+    
+    You've now created a custom dataset that contains MD5 hashes
+    of files you've declared to be evil.
+    
+    $ nsrlsvr -t 1800
+    
+    You've started the server and instructed it to automatically
+    shut down after a half-hour of inactivity.

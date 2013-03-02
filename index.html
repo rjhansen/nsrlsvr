@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Nsrlsvr by rjhansen</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Nsrlsvr</h1>
+        <p>Serves NSRL RDS hashes</p>
+
+        <p class="view"><a href="https://github.com/rjhansen/nsrlsvr">View the Project on GitHub <small>rjhansen/nsrlsvr</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/rjhansen/nsrlsvr/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/rjhansen/nsrlsvr/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/rjhansen/nsrlsvr">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>nsrlsvr</h1>
+
+<p>The latest version is 1.1.3, and may be <a href="https://github.com/rjhansen/nsrlsvr/archive/1.1.3.tar.gz">downloaded from GitHub</a>.</p>
+
+<h2>What’s nsrlsvr?</h2>
+
+<p>The National Institute of Science and Technology (NIST) maintains the National Software Reference Library (NSRL) — a giant compendium of software contributed by vendors.  It’s not a library in the sense that you can check things out from it, though: it’s more a library that you can check to see whether a given file already exists.  All the system files from Windows 7 are in the NSRL, as is the latest releases of Firefox and Opera and Chrome, Winamp and…</p>
+
+<p>It's large, really large: almost thirty million distinct files.</p>
+
+<h2>What’s the RDS?</h2>
+
+<p>The Reference Data Set (RDS) is a list of hashes for all of the files maintained within the NSRL.  Thirty million hashes, each one corresponding to a known piece of software.  This isn’t to say everything listed is known good, known safe, or anything like that — just that it’s known.</p>
+
+<h2>Why is the RDS important?</h2>
+
+<p>Forensic investigators, first responders and technical support staff often have a needle-in-a-haystack problem: of all the files on a given storage medium they are probably only interested in a handful.  A good way to begin is by finding out what things may be ignored.  The odds are excellent that a file present in the RDS is of no real interest to the investigator.</p>
+
+<h2>What does <code>nsrlsvr</code> do?</h2>
+
+<p>It keeps track of 30 million hash values in an in-memory dataset and allows users to query that set at extremely high volume.  This allows an investigator using an NSRL tool (such as <code>nsrllookup</code>) to winnow through large numbers of files in a very short period of time.</p>
+
+<h2>Who wrote it?</h2>
+
+<p>I did — Rob Hansen, or rjhansen on GitHub.  Feel free to <a href="mailto:rjh@sixdemonbag.org?subject=nsrlsvr">email me</a>.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/rjhansen">rjhansen</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>

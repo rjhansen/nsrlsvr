@@ -27,4 +27,4 @@ if [X for X in hashes[1:] if len(X) != first_len]:
     
 with open("src/NSRLFile.txt", "w") as output:
     for hash in hashes:
-        output.write(hash + "\n")
+        output.write(hash.upper() + "\n")

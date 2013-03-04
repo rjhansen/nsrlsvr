@@ -1,3 +1,7 @@
+1.1.4: March 4, 2013
+    * Restored the ability to use lowercase hex symbols in custom
+      datasets.
+
 1.1.1: February 22, 2013
     * Code cleanups.  Now has better support for using custom datasets.
       Less dependence on scripts for building.

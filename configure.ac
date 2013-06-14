@@ -47,8 +47,8 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.39/RDS_239m.zip
-nsrl_filename=RDS_239m.zip
+RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.40/RDS_240m.zip
+nsrl_filename=RDS_240m.zip
 
 
 if test "x$nsrl" != xno ; then
@@ -92,7 +92,7 @@ if test "x$custom" = xno ; then
   else
     AC_MSG_NOTICE([uncompressing the NSRL RDS -- this may take a while...])
     rm -f NSRLFile.txt src/NSRLFile.txt
-    unzip -o $nsrl_filename NSRLFile.txt
+    unzip -o $nsrl_filename minimal/NSRLFile.txt
     AC_MSG_NOTICE([converting into nsrlsvr's data format -- please wait...])
     $PYTHON ./denistify.py
     rm -f NSRLFile.txt

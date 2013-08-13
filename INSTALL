@@ -21,7 +21,7 @@ Installation instructions:
     be in a format nsrlsvr understands.  One good way to do this is with 
     Jesse Kornblum's md5deep tool:
 
-    $ md5deep -c [FILES] > my_dataset.txt
+    $ md5deep -rco f [FILES] > my_dataset.txt
 
     
 3.  Run the ./configure script, passing it one or more of:

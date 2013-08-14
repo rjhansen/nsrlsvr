@@ -1,19 +1,14 @@
-If you're reading this, then you're using a Subversion snapshot of
-nsrlsvr.  Please check your configure.in script to ensure the
-version has "svn" after it.  If it doesn't, please holler at me
-that I've got a broken version string.  :)
-
-Building from Subversion sources is not recommended.  At any given
+Building from the Git master tree is not recommended.  At any given
 moment the tree may be broken.  That said, if you want to live on
 the edge, go for it.
 
-1.  Do an 'svn up'.  Don't assume that just because you checked the
-    code out yesterday that it's still the same today.  Seriously,
-    svn up.
-2.  'sh ./bootstrap.sh'.  The Subversion tree does not include a
+1.  Don't assume that just because you checked the code out 
+    yesterday that it's still the same today.  Seriously, don't.
+2.  'sh ./bootstrap.sh'.  The development tree does not include a
     configure script.  If you have a configure script in your
     directory, then it is something you created and it may no longer
     be in sync with changes to the tree.  Running the bootstrap
     script will create a new configure script for you.
 3.  Once you've recreated the configure script, build it just as
     you would a released version.
+

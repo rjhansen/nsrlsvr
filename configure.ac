@@ -1,4 +1,4 @@
-AC_INIT([NSRL Server], [1.1.4], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
+AC_INIT([NSRL Server], [1.1.5], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
 AC_ARG_WITH([nsrl],
     [AS_HELP_STRING([--with-nsrl],
         [use NIST's NSRL RDS @<:@default: use the NSRL RDS@:>@])],
@@ -47,8 +47,8 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.40/RDS_240m.zip
-nsrl_filename=RDS_240m.zip
+RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.41/rds_241m.zip
+nsrl_filename=rds_241m.zip
 
 
 if test "x$nsrl" != xno ; then
@@ -93,9 +93,12 @@ if test "x$custom" = xno ; then
     AC_MSG_NOTICE([uncompressing the NSRL RDS -- this may take a while...])
     rm -f NSRLFile.txt src/NSRLFile.txt
     unzip -o $nsrl_filename minimal/NSRLFile.txt
+    mv minimal/NSRLFile.txt NSRLFile.txt
     AC_MSG_NOTICE([converting into nsrlsvr's data format -- please wait...])
     $PYTHON ./denistify.py
-    rm -f NSRLFile.txt
+    AC_MSG_NOTICE([sorting the temporary file into its final form...])
+    sort dummyfile > src/NSRLFile.txt
+    rm -rf NSRLFile.txt minimal dummyfile
   fi
 else
   if ! test -r $custom ; then

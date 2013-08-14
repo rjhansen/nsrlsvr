@@ -1,23 +1,30 @@
 #!/usr/bin/env python
 #coding=UTF-8
 
-import re, sys
+from __future__ import unicode_literals
+import re, os, codecs, sys
 
-md5_re = re.compile('^.*"([0-9A-Fa-f]{32})".*$')
-hashes = []
+md5_re = re.compile(r'^[A-Fa-f0-9]{32}$')
 count = 0
 
-with open("NSRLFile.txt") as fh:
-    line = fh.readline()
-    while line:
-        elements = line.split(",")
-        if len(elements) >= 2:
-            match = md5_re.match(elements[1])
-            if match:
-                hashes.append(match.group(1))
-        line = fh.readline()
+sys.stdout.write("\n")
 
-hashes.sort()
-with open("src/NSRLFile.txt", "w") as fh:
-    for entry in hashes:
-        fh.write(entry + "\n")
+try:
+    os.unlink("dummyfile")
+except:
+    pass
+
+with codecs.open("NSRLFile.txt", encoding="UTF-8", errors="replace") as infile:
+    with open("dummyfile", "w") as outfile:
+        line = infile.readline()[44:76]
+        sys.stdout.write("Hashes processed: 0")
+        while line:
+            match = md5_re.match(line)
+            if match:
+                outfile.write(line + "\n")
+                if count % 1000 == 0:
+                    sys.stdout.write("\rHashes processed: " + str(count))
+                count += 1
+            line = infile.readline()[44:76]
+
+sys.stdout.write("\rHashes processed: " + str(count) + "\n")

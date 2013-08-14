@@ -28,29 +28,35 @@
         </ul>
       </header>
       <section>
-        <h1>nsrlsvr</h1>
+        <h1>
+<a name="nsrlsvr" class="anchor" href="#nsrlsvr"><span class="octicon octicon-link"></span></a>nsrlsvr</h1>
 
-<p>The latest version is 1.1.4, and may be <a href="https://github.com/rjhansen/nsrlsvr/archive/1.1.4.tar.gz">downloaded from GitHub</a>.</p>
+<p>The latest version is 1.1.5, and may be <a href="https://github.com/rjhansen/nsrlsvr/archive/1.1.5.tar.gz">downloaded from GitHub</a>.</p>
 
-<h2>What’s nsrlsvr?</h2>
+<h2>
+<a name="whats-nsrlsvr" class="anchor" href="#whats-nsrlsvr"><span class="octicon octicon-link"></span></a>What’s nsrlsvr?</h2>
 
 <p>The National Institute of Science and Technology (NIST) maintains the National Software Reference Library (NSRL) — a giant compendium of software contributed by vendors.  It’s not a library in the sense that you can check things out from it, though: it’s more a library that you can check to see whether a given file already exists.  All the system files from Windows 7 are in the NSRL, as is the latest releases of Firefox and Opera and Chrome, Winamp and…</p>
 
-<p>It's large, really large: almost thirty million distinct files.</p>
+<p>It's large, really large: thirty-three million distinct hashes.</p>
 
-<h2>What’s the RDS?</h2>
+<h2>
+<a name="whats-the-rds" class="anchor" href="#whats-the-rds"><span class="octicon octicon-link"></span></a>What’s the RDS?</h2>
 
 <p>The Reference Data Set (RDS) is a list of hashes for all of the files maintained within the NSRL.  Thirty million hashes, each one corresponding to a known piece of software.  This isn’t to say everything listed is known good, known safe, or anything like that — just that it’s known.</p>
 
-<h2>Why is the RDS important?</h2>
+<h2>
+<a name="why-is-the-rds-important" class="anchor" href="#why-is-the-rds-important"><span class="octicon octicon-link"></span></a>Why is the RDS important?</h2>
 
 <p>Forensic investigators, first responders and technical support staff often have a needle-in-a-haystack problem: of all the files on a given storage medium they are probably only interested in a handful.  A good way to begin is by finding out what things may be ignored.  The odds are excellent that a file present in the RDS is of no real interest to the investigator.</p>
 
-<h2>What does <code>nsrlsvr</code> do?</h2>
+<h2>
+<a name="what-does-nsrlsvr-do" class="anchor" href="#what-does-nsrlsvr-do"><span class="octicon octicon-link"></span></a>What does <code>nsrlsvr</code> do?</h2>
 
-<p>It keeps track of 30 million hash values in an in-memory dataset and allows users to query that set at extremely high volume.  This allows an investigator using an NSRL tool (such as <code>nsrllookup</code>) to winnow through large numbers of files in a very short period of time.</p>
+<p>It keeps track of 33 million hash values in an in-memory dataset and allows users to query that set at extremely high volume.  This allows an investigator using an NSRL tool (such as <code>nsrllookup</code>) to winnow through large numbers of files in a very short period of time.</p>
 
-<h2>Who wrote it?</h2>
+<h2>
+<a name="who-wrote-it" class="anchor" href="#who-wrote-it"><span class="octicon octicon-link"></span></a>Who wrote it?</h2>
 
 <p>I did — Rob Hansen, or rjhansen on GitHub.  Feel free to <a href="mailto:rjh@sixdemonbag.org?subject=nsrlsvr">email me</a>.</p>
       </section>

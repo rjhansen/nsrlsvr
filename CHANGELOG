@@ -1,3 +1,13 @@
+1.2.0: in progress, no release date yet
+    * Internal changes to dramatically reduce memory fragmentation.
+    * Internal changes to slightly increase throughput.
+    * Internal changes to slightly decrease startup time.
+    * So far there are no changes noticeable to clients.
+
+1.1.5: August, 2013
+    * Updated to use the latest NSRL RDS (2.41m).
+    * The Python data-munging script now works under Python 3.
+
 1.1.4: March 4, 2013
     * Restored the ability to use lowercase hex symbols in custom
       datasets.

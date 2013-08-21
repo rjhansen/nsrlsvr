@@ -36,13 +36,13 @@ Installation instructions:
 
 
 4.  Once you've completed the "make && make install" dance, an
-    executables will be installed to $PREFIX/bin: nsrlsvr, the server
-    application, which runs as a UNIX daemon
+    executable will be installed to $PREFIX/bin: nsrlsvr, the server
+    application, which runs as a UNIX daemon.
 
 
 5.  As an example of how it can be used:
 
-    $ md5deep -c /path/to/evil/files > evil_dataset.txt
+    $ md5deep -rco f /path/to/evil/files > evil_dataset.txt
     $ ./configure --with-custom=evil_dataset.txt
     $ make
     $ sudo make install

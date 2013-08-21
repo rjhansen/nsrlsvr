@@ -73,6 +73,7 @@ using std::ifstream;
 using std::cerr;
 using std::vector;
 using std::remove_if;
+using std::sort;
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 #define WARN LOG_MAKEPRI(LOG_USER, LOG_WARNING)
@@ -94,15 +95,15 @@ bool status_enabled(false);
 /** Tracks whether the server should run as a daemon. */
 bool standalone(false);
 
-/** Our set of hashes, represented as a set of strings.  Note
-  * that the current NSRL library contains approximately 32
+/** Our set of hashes, represented as a block of contiguous memory.
+  * Note that the current NSRL library contains approximately 32
   * million values, each at roughly 64 bytes (rounded to binary
   * powers to make the math easier).  This is 2**25 values times
   * 2**6 bytes each = 2**31 bytes, or about two gigs of RAM.
   *
   * Moral of the story: populating this set is computationally
   * expensive. */
-set<string> hash_set;
+vector<string> hash_set;
 
 /** Tracks where we look for the location of the
   * reference data set. */
@@ -205,7 +206,7 @@ void load_hashes()
         exit(EXIT_FAILURE);
         return;
     }
-    hash_set.insert(firstline);
+    hash_set.push_back(firstline);
 
     while (infile) {
         // Per the C++ spec, &vector<T>[loc] is guaranteed
@@ -237,11 +238,12 @@ void load_hashes()
             syslog(INFO, "loaded %u million hashes", hash_count / 1000000);
         } 
 
-        hash_set.insert(line);
+        hash_set.push_back(line);
     }
     infile.close();
     syslog(INFO, "read in %u unique hashes",
            static_cast<uint32_t>(hash_set.size()));
+    sort(hash_set.begin(), hash_set.end());
 }
 
 /** A thin wrapper around handler.cc and handle_client, meant
@@ -431,7 +433,7 @@ void show_usage(const char* program_name)
 }
 
 /** An externally available const reference to the hash set. */
-const set<string>& hashes(hash_set);
+const vector<string>& hashes(hash_set);
 
 /** An externally available const reference to the variable storing
   * whether or not status checking should be enabled. */
@@ -513,7 +515,7 @@ int main(int argc, char* argv[])
         daemonize();
 
     load_hashes();
-    svr_sock = make_socket();
+    svr_sock = make_socket();    
 
     pthread_create(&shutdown_handler_id, NULL, shutdown_handler, NULL);
 

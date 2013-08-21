@@ -77,8 +77,9 @@ using std::ptr_fun;
 using std::remove;
 using std::auto_ptr;
 using std::exception;
+using std::binary_search;
 
-extern const set<string>& hashes;
+extern const vector<string>& hashes;
 extern const bool& enable_status;
 extern const bool& only_old;
 
@@ -413,7 +414,7 @@ void handle_protocol_10(SocketIO& sio, const char* ip_addr)
                 sio.write_line("NOT OK\r\n");
                 return;
             }
-            if (hashes.end() != hashes.find(commands->at(index))) {
+            if (binary_search(hashes.begin(), hashes.end(), commands->at(index))) {
                 return_seq += "1";
                 found += 1;
             } else {
@@ -501,10 +502,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                             sio.write_line("NOT OK\r\n");
                             return;
                         }
-
-                        set<string>::const_iterator iter(hashes.begin());
-                        iter = hashes.find(commands->at(index));
-                        if (iter != hashes.end()) {
+                        if (binary_search(hashes.begin(), hashes.end(), commands->at(index))) {
                             return_seq += "1";
                             found += 1;
                         } else {

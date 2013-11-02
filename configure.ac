@@ -47,8 +47,8 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.41/rds_241m.zip
-nsrl_filename=rds_241m.zip
+RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.42/rds_242m.zip
+nsrl_filename=rds_242m.zip
 
 
 if test "x$nsrl" != xno ; then
@@ -63,11 +63,11 @@ if ! test -r $nsrl_filename && test "x$custom" = xno ; then
   AC_CHECK_PROG([UNZIP], [unzip], [unzip], AC_MSG_ERROR([unzip not found: this is necessary to use the downloaded NIST NSRL RDS]))
   AC_CHECK_PROG([WGET], [wget], [wget], [no])
   if test "x$WGET" = xwget ; then
-    wget $RDS_URL ;
+    wget -4 $RDS_URL ;
   else
     AC_CHECK_PROG([CURL], [curl], [curl], [no])
     if test "x$CURL" = xcurl ; then
-      curl -O $RDS_URL ;
+      curl -4 -O $RDS_URL ;
     else
       AC_MSG_ERROR([The NIST NSRL RDS must be downloaded, but neither curl nor wget are in your PATH.  Please fix this, and try again.])
     fi

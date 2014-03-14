@@ -1,8 +1,10 @@
-1.2.0: in progress, no release date yet
+1.2.1: March 2014
+    * Updated to RDS 2.43
+
+1.2.0: January 2014
     * Internal changes to dramatically reduce memory fragmentation.
     * Internal changes to slightly increase throughput.
     * Internal changes to slightly decrease startup time.
-    * So far there are no changes noticeable to clients.
 
 1.1.5: August, 2013
     * Updated to use the latest NSRL RDS (2.41m).

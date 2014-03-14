@@ -1,4 +1,4 @@
-AC_INIT([NSRL Server], [1.2.0], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
+AC_INIT([NSRL Server], [1.2.1], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
 AC_ARG_WITH([nsrl],
     [AS_HELP_STRING([--with-nsrl],
         [use NIST's NSRL RDS @<:@default: use the NSRL RDS@:>@])],
@@ -47,8 +47,8 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.42/rds_242m.zip
-nsrl_filename=rds_242m.zip
+RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.43/rds_243m.zip
+nsrl_filename=rds_243m.zip
 
 
 if test "x$nsrl" != xno ; then

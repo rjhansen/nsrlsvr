@@ -22,44 +22,18 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-AC_PROG_CXX
-AC_TYPE_INT8_T
-AC_TYPE_UINT8_T
-AC_TYPE_INT16_T
-AC_TYPE_UINT16_T
-AC_TYPE_INT32_T
-AC_TYPE_UINT32_T
-AC_TYPE_INTMAX_T
-ACX_PTHREAD([], AC_MSG_ERROR([pthreads does not appear usable.]))
-AC_CHECK_FUNCS([inet_ntoa])
-AC_CHECK_FUNCS([memset])
-AC_CHECK_FUNCS([socket])
-AC_CHECK_HEADERS([arpa/inet.h])
-AC_CHECK_HEADERS([limits.h])
-AC_CHECK_HEADERS([netinet/in.h])
-AC_CHECK_HEADERS([sys/socket.h])
-AC_CHECK_HEADERS([syslog.h])
-AC_C_CONST
-AC_FUNC_FORK
-dnl AC_FUNC_GETLOADAVG
-AC_HEADER_STDBOOL
-AC_TYPE_PID_T
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-
 RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.43/rds_243m.zip
 nsrl_filename=rds_243m.zip
-
 
 if test "x$nsrl" != xno ; then
   if ! test -r $nsrl ; then
     AC_MSG_ERROR([Couldn't find the dataset specified.])
   else
-    nsrl_filename = $nsrl
+    nsrl_filename=$nsrl
   fi
 fi
 
-if ! test -r $nsrl_filename && test "x$custom" = xno ; then
+if (!(test -r $nsrl_filename) && (test "x$custom" = xno)) ; then
   AC_CHECK_PROG([UNZIP], [unzip], [unzip], AC_MSG_ERROR([unzip not found: this is necessary to use the downloaded NIST NSRL RDS]))
   AC_CHECK_PROG([WGET], [wget], [wget], [no])
   if test "x$WGET" = xwget ; then
@@ -114,6 +88,31 @@ else
   rm -f src/NSRLFile.txt
   $PYTHON ./convert-format.py $custom
 fi
+
+
+AC_PROG_CXX
+AC_TYPE_INT8_T
+AC_TYPE_UINT8_T
+AC_TYPE_INT16_T
+AC_TYPE_UINT16_T
+AC_TYPE_INT32_T
+AC_TYPE_UINT32_T
+AC_TYPE_INTMAX_T
+ACX_PTHREAD([], AC_MSG_ERROR([pthreads does not appear usable.]))
+AC_CHECK_FUNCS([inet_ntoa])
+AC_CHECK_FUNCS([memset])
+AC_CHECK_FUNCS([socket])
+AC_CHECK_HEADERS([arpa/inet.h])
+AC_CHECK_HEADERS([limits.h])
+AC_CHECK_HEADERS([netinet/in.h])
+AC_CHECK_HEADERS([sys/socket.h])
+AC_CHECK_HEADERS([syslog.h])
+AC_C_CONST
+AC_FUNC_FORK
+AC_HEADER_STDBOOL
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
   
 AC_OUTPUT([Makefile src/Makefile man/Makefile])
 

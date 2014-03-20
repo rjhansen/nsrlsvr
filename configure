@@ -3319,8 +3319,6 @@ if test "x$nsrl" != xno ; then
 fi
 
 if (!(test -r $nsrl_filename) && (test "x$custom" = xno)) ; then
-  as_fn_error $? "Shit." "$LINENO" 5
-
   # Extract the first word of "unzip", so it can be a program name with args.
 set dummy unzip; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5

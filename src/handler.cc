@@ -65,6 +65,13 @@
 #include <unistd.h> // because Fedora has lately taken to being weird
 #endif
 
+/* And Apple requires sys/uio.h for some reason. */
+#ifdef __APPLE__
+#include <sys/uio.h>
+#include <unistd.h>
+#endif
+
+
 using std::set;
 using std::string;
 using std::find;

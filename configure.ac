@@ -1,4 +1,4 @@
-AC_INIT([NSRL Server], [1.2.1], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
+AC_INIT([NSRL Server], [1.3], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
 AC_ARG_WITH([nsrl],
     [AS_HELP_STRING([--with-nsrl],
         [use NIST's NSRL RDS @<:@default: use the NSRL RDS@:>@])],

@@ -6,15 +6,15 @@ Installation instructions:
     a.  NIST's NSRL RDS (http://http://www.nsrl.nist.gov/).
     
     b.  A dataset that you provide at compile-time.  For instance,
-        if you have a proprietary set of SHA-1 hashes of known 
+        if you have a proprietary set of MD5 hashes of known 
         malware and know you'll only ever want to use that, this is
         the way to go.  
 
     You may also tell nsrlsvr to use a different file by passing the
     "-f" flag when launching the server.  This file must contain nothing
-    but MD5, SHA-1 or SHA-256 hashes, one per line in hexadecimal format,
-    with no other content on a line.  This option is mostly for developer
-    testing: most users will never touch it.
+    but MD5 hashes, one per line in hexadecimal format, with no other 
+    content on a line.  This option is mostly for developer testing: 
+    most users will never touch it.
 
 
 2.  If you're compiling it using your own dataset, your dataset must

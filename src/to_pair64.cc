@@ -34,12 +34,13 @@ pair64 to_pair64(string input)
     char ch(0);
     int val(0);
 
-    if (input.size() != 32) {
+    if (input.size() != 32)
+    {
         throw std::invalid_argument("invalid data passed to to_pair64");
     }
 
     transform(input.begin(), input.end(), input.begin(), ::tolower);
-    
+
     for (index = 0 ; index < 32 ; index += 1)
     {
         ch = input[index];

@@ -1,6 +1,4 @@
-/* $Id: handler.hpp 108 2012-01-30 19:30:29Z rjh $
- *
- * Copyright (c) 2011, Robert J. Hansen <rjh@secret-alchemy.com>
+/* Copyright (c) 2011-2014, Robert J. Hansen <rjh@secret-alchemy.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,6 +12,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.*/
 
+#include <sys/types.h>
 #include <string>
+#include <utility>
 
 void handle_client(int32_t, const std::string&);
+std::pair<unsigned long long, unsigned long long> to_pair64(std::string);
+

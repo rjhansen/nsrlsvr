@@ -1,6 +1,4 @@
-/* $Id: handler.cc 142 2013-02-23 22:25:32Z rjh $
- *
- * Copyright (c) 2011-2012, Robert J. Hansen <rjh@secret-alchemy.com>
+/* Copyright (c) 2011-2014, Robert J. Hansen <rjh@secret-alchemy.com>
  * and others.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -19,11 +17,11 @@
  *   This is a small enough project we don't need a formal coding standard.
  *   That said, here are some helpful tips for people who want to submit
  *   patches:
- *   
+ *
  *   - If it's not 100% ISO C++98, it won't get in.
  *   - It must compile cleanly and without warnings under both GNU G++
  *     and Clang++, even with "-W -Wextra -ansi -pedantic".
- *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.  
+ *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.
  *     I like these: I think they're more readable.  Please use them.
  *   - C++ allows you to initialize variables at declaration time by
  *     doing something like "int x(3)" instead of "int x = 3".  Please
@@ -35,7 +33,7 @@
  *     documenting it.
  *
  * Contributor history:
- * 
+ *
  * Robert J. Hansen <rjh@secret-alchemy.com>
  *   - most everything
  * Jesse Kornblum <jessekornblum@gmail.com>
@@ -55,6 +53,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <inttypes.h>
+#include <utility>
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 
@@ -85,12 +84,17 @@ using std::remove;
 using std::auto_ptr;
 using std::exception;
 using std::binary_search;
+using std::pair;
 
-extern const vector<string>& hashes;
+typedef unsigned long long ULONG64;
+typedef pair<ULONG64, ULONG64> pair64;
+
+extern const vector<pair64>& hashes;
 extern const bool& enable_status;
 extern const bool& only_old;
 
-namespace {
+namespace
+{
 
 /** A convenience exception representing network errors that cannot
   * be recovered from, and will result in a graceful bomb-out.
@@ -100,7 +104,8 @@ namespace {
 class UnrecoverableNetworkError : public exception
 {
 public:
-    const char* what() const throw() {
+    const char* what() const throw()
+    {
         return "unr net err";
     }
 };
@@ -156,7 +161,8 @@ public:
       * @since 1.1 */
     void write_line(string line) const
     {
-        if (-1 == write(sock_fd, line.c_str(), line.size())) {
+        if (-1 == write(sock_fd, line.c_str(), line.size()))
+        {
             throw UnrecoverableNetworkError();
         }
     }
@@ -197,7 +203,8 @@ public:
          * wonder why I'm tempted to start drinking before the sun
          * rises, well, this one's a good example... */
 
-        while (true) {
+        while (true)
+        {
             pollfd fds = { sock_fd, POLLIN, 0 };
             int poll_code(poll(&fds, 1, 750));
 
@@ -208,7 +215,8 @@ public:
                      fds.revents & POLLHUP)
                 throw UnrecoverableNetworkError();
 
-            else if (fds.revents & POLLIN) {
+            else if (fds.revents & POLLIN)
+            {
                 memset(static_cast<void*>(&tmp_buf[0]),
                        0,
                        tmp_buf.size());
@@ -224,7 +232,8 @@ public:
 
                 string::iterator iter = find(buffer.begin(),
                                              buffer.end(), '\n');
-                if (iter != buffer.end()) {
+                if (iter != buffer.end())
+                {
                     auto_ptr<string> rv(new string(buffer.begin(), iter));
                     rv->erase(remove(rv->begin(),
                                      rv->end(),
@@ -282,9 +291,11 @@ auto_ptr<vector<string> > tokenize(string& line, char character = ' ')
         : line.end()
     );
 
-    while (begin != line.end()) {
+    while (begin != line.end())
+    {
         rv->push_back(string(begin, end));
-        if (end == line.end()) {
+        if (end == line.end())
+        {
             begin = line.end();
             continue;
         }
@@ -335,29 +346,35 @@ int32_t parse_version(auto_ptr<string> line)
     size_t index(0);
 
     if (tokens->size() != 2 or
-            tokens->at(0) != "VERSION:") {
+            tokens->at(0) != "VERSION:")
+    {
         goto PARSE_VERSION_BAIL_BAD;
     }
 
     version_tokens = tokenize(tokens->at(1), '.');
 
-    if (version_tokens->size() < 1 or version_tokens->size() > 4) {
+    if (version_tokens->size() < 1 or version_tokens->size() > 4)
+    {
         goto PARSE_VERSION_BAIL_BAD;
     }
 
-    while (version_tokens->size() != 4) {
+    while (version_tokens->size() != 4)
+    {
         version_tokens->push_back("0");
     }
 
-    for (index = 0 ; index < 4 ; ++index) {
+    for (index = 0 ; index < 4 ; ++index)
+    {
         string& thing(version_tokens->at(index));
         if (thing.end() != find_if(thing.begin(),
                                    thing.end(),
-                                   not1(ptr_fun(::isdigit)))) {
+                                   not1(ptr_fun(::isdigit))))
+        {
             goto PARSE_VERSION_BAIL_BAD;
         }
         this_token = atoi(thing.c_str());
-        if (this_token < 0 or this_token > 254) {
+        if (this_token < 0 or this_token > 254)
+        {
             goto PARSE_VERSION_BAIL_BAD;
         }
         version = (version << 8) + this_token;
@@ -383,10 +400,12 @@ bool ishexdigest(const string& digest)
 {
     string::const_iterator iter(digest.begin());
 
-    if (not (digest.size() == 40 or digest.size() == 32)) {
+    if (not (digest.size() == 40 or digest.size() == 32))
+    {
         return false;
     }
-    for ( ; iter != digest.end() ; ++iter) {
+    for ( ; iter != digest.end() ; ++iter)
+    {
         bool is_number = (*iter >= '0' and *iter <= '9');
         bool is_letter = (*iter >= 'A' and *iter <= 'F');
         if (not (is_number or is_letter))
@@ -408,45 +427,56 @@ void handle_protocol_10(SocketIO& sio, const char* ip_addr)
     double frac(0.0);
     uint32_t total_queries(0);
 
-    try {
+    try
+    {
         auto_ptr<vector<string> > commands(tokenize(sio.read_line()));
 
-        if (commands->size() < 2 or commands->at(0) != "QUERY") {
+        if (commands->size() < 2 or commands->at(0) != "QUERY")
+        {
             sio.write_line("NOT OK\r\n");
             return;
         }
 
-        for (size_t index = 1 ; index < commands->size() ; ++index) {
-            if (not ishexdigest(commands->at(index))) {
+        for (size_t index = 1 ; index < commands->size() ; ++index)
+        {
+            if (not ishexdigest(commands->at(index)))
+            {
                 sio.write_line("NOT OK\r\n");
                 return;
             }
-            if (binary_search(hashes.begin(), hashes.end(), commands->at(index))) {
+            if (binary_search(hashes.begin(), hashes.end(),
+                              to_pair64(commands->at(index))))
+            {
                 return_seq += "1";
                 found += 1;
-            } else {
+            }
+            else
+            {
                 return_seq += "0";
             }
         }
-        
-        total_queries = commands->size() - 
-            (commands->size() > 0 ? 1 : 0);
-        
-        if (total_queries) {
+
+        total_queries = commands->size() -
+                        (commands->size() > 0 ? 1 : 0);
+
+        if (total_queries)
+        {
             double numerator(100 * found);
             double denominator(total_queries);
             frac = numerator / denominator;
         }
-        
+
         syslog(INFO,
-"%s: protocol 1.0, found %u of %u hashes (%.1f%%), closed normally",
+               "%s: protocol 1.0, found %u of %u hashes (%.1f%%), closed normally",
                ip_addr,
                found,
                total_queries,
                frac);
         return_seq = "OK " + return_seq + "\r\n";
         sio.write_line(return_seq);
-    } catch (exception&) {
+    }
+    catch (exception&)
+    {
         return;
     }
 }
@@ -461,20 +491,24 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
     uint32_t total_queries(0);
     uint32_t found(0);
     double frac(0.0);
-    
-    try {
+
+    try
+    {
         auto_ptr<vector<string> > commands(tokenize(sio.read_line()));
-        while (commands->size() >= 1) {
+        while (commands->size() >= 1)
+        {
             string return_seq("");
 
-            if ("BYE" == commands->at(0)) {
-                if (total_queries) {
+            if ("BYE" == commands->at(0))
+            {
+                if (total_queries)
+                {
                     double numerator(100 * found);
                     double denominator(total_queries);
                     frac = numerator / denominator;
                 }
                 syslog(INFO,
-"%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed normally",
+                       "%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed normally",
                        ip_addr,
                        found,
                        total_queries,
@@ -482,7 +516,8 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 return;
             }
 
-            else if ("DOWNSHIFT" == commands->at(0)) {
+            else if ("DOWNSHIFT" == commands->at(0))
+            {
                 syslog(INFO,
                        "%s asked for a protocol downgrade to 1.0",
                        ip_addr);
@@ -491,28 +526,39 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 return;
             }
 
-            else if ("UPSHIFT" == commands->at(0)) {
+            else if ("UPSHIFT" == commands->at(0))
+            {
                 syslog(INFO,
                        "%s asked for a protocol upgrade (refused)",
                        ip_addr);
                 sio.write_line("NOT OK\r\n");
             }
 
-            else if ("QUERY" == commands->at(0)) {
-                if (commands->size() == 1) {
+            else if ("QUERY" == commands->at(0))
+            {
+                if (commands->size() == 1)
+                {
                     sio.write_line("NOT OK\r\n");
                     return;
-                } else {
+                }
+                else
+                {
                     size_t index(1);
-                    for ( ; index < commands->size() ; ++index) {
-                        if (not ishexdigest(commands->at(index))) {
+                    for ( ; index < commands->size() ; ++index)
+                    {
+                        if (not ishexdigest(commands->at(index)))
+                        {
                             sio.write_line("NOT OK\r\n");
                             return;
                         }
-                        if (binary_search(hashes.begin(), hashes.end(), commands->at(index))) {
+                        if (binary_search(hashes.begin(), hashes.end(),
+                                          to_pair64(commands->at(index))))
+                        {
                             return_seq += "1";
                             found += 1;
-                        } else {
+                        }
+                        else
+                        {
                             return_seq += "0";
                         }
                     }
@@ -521,7 +567,8 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 }
             }
 
-            else if ("STATUS" == commands->at(0) and enable_status) {
+            else if ("STATUS" == commands->at(0) and enable_status)
+            {
                 double loadavg[3] = { 0.0, 0.0, 0.0 };
                 char buf[1024];
 
@@ -531,11 +578,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                          1024,
                          "OK %u %s hashes, load %.2f %.2f %.2f\r\n",
                          (u_int32_t) hashes.size(),
-                         (hashes.begin() == hashes.end()) ? "unknown" :
-                         (hashes.begin()->size() == 32 ? "MD5" : 
-                          hashes.begin()->size() == 40 ? "SHA-1" :
-                          hashes.begin()->size() == 64 ? "SHA-256" : 
-                          "unknown algorithm"),
+                         "MD5",
                          loadavg[0],
                          loadavg[1],
                          loadavg[2]);
@@ -545,26 +588,33 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                        "%s asked for server status (sent '%s')",
                        ip_addr,
                        buf);
-            } else if ("STATUS" == commands->at(0)) {
+            }
+            else if ("STATUS" == commands->at(0))
+            {
                 syslog(INFO,
                        "%s asked for server status (refused)",
                        ip_addr);
                 return_seq = "OK NOT SUPPORTED\r\n";
-            } else {
+            }
+            else
+            {
                 sio.write_line("NOT OK\r\n");
                 return;
             }
             sio.write_line(return_seq);
             commands = tokenize(sio.read_line());
         }
-    } catch (exception&) {
-        if (total_queries) {
+    }
+    catch (exception&)
+    {
+        if (total_queries)
+        {
             double numerator(100 * found);
             double denominator(total_queries);
             frac = numerator / denominator;
         }
         syslog(INFO,
-"%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed abnormally",
+               "%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed abnormally",
                ip_addr,
                found,
                total_queries,
@@ -581,20 +631,28 @@ void handle_client(const int32_t fd, const string& ip_addr)
 {
     SocketIO sio(fd);
 
-    try {
+    try
+    {
         int32_t version(parse_version(sio.read_line()));
-        if (version > 0 and version <= 0x01000000) {
+        if (version > 0 and version <= 0x01000000)
+        {
             sio.write_line("OK\r\n");
             handle_protocol_10(sio, ip_addr.c_str());
-        } else if (version > 0x01000000 and
-                   version <= 0x02000000 and
-                   not only_old) {
+        }
+        else if (version > 0x01000000 and
+                 version <= 0x02000000 and
+                 not only_old)
+        {
             sio.write_line("OK\r\n");
             handle_protocol_20(sio, ip_addr.c_str());
-        } else {
+        }
+        else
+        {
             sio.write_line("NOT OK\r\n");
         }
-    } catch (exception&) {
+    }
+    catch (exception&)
+    {
         return;
     }
 }

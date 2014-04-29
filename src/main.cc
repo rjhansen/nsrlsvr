@@ -1,6 +1,4 @@
-/* $Id: main.cc 142 2013-02-23 22:25:32Z rjh $
- *
- * Copyright (c) 2011-2012, Robert J. Hansen <rjh@secret-alchemy.com>
+/* Copyright (c) 2011-2014, Robert J. Hansen <rjh@secret-alchemy.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,11 +16,11 @@
  *   This is a small enough project we don't need a formal coding standard.
  *   That said, here are some helpful tips for people who want to submit
  *   patches:
- *   
+ *
  *   - If it's not 100% ISO C++98, it won't get in.
  *   - It must compile cleanly and without warnings under both GNU G++
  *     and Clang++, even with "-W -Wextra -ansi -pedantic".
- *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.  
+ *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.
  *     I like these: I think they're more readable.  Please use them.
  *   - C++ allows you to initialize variables at declaration time by
  *     doing something like "int x(3)" instead of "int x = 3".  Please
@@ -55,6 +53,7 @@
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
+#include <utility>
 
 /* Additional defines necessary on FreeBSD: */
 /* Necessary for sockaddr and sockaddr_in structures */
@@ -74,6 +73,10 @@ using std::cerr;
 using std::vector;
 using std::remove_if;
 using std::sort;
+using std::pair;
+
+typedef unsigned long long ULONG64;
+typedef pair<ULONG64, ULONG64> pair64;
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 #define WARN LOG_MAKEPRI(LOG_USER, LOG_WARNING)
@@ -84,7 +87,8 @@ using std::sort;
 #define MAX_PENDING_REQUESTS 20
 #define BUFFER_SIZE 128
 
-namespace {
+namespace
+{
 
 /** Tracks whether the server should only support protocol 1.0. */
 bool old_only(false);
@@ -97,13 +101,13 @@ bool standalone(false);
 
 /** Our set of hashes, represented as a block of contiguous memory.
   * Note that the current NSRL library contains approximately 32
-  * million values, each at roughly 64 bytes (rounded to binary
+  * million values, each at roughly 32 bytes (rounded to binary
   * powers to make the math easier).  This is 2**25 values times
-  * 2**6 bytes each = 2**31 bytes, or about two gigs of RAM.
+  * 2**5 bytes each = 2**30 bytes, or about a gig of RAM.
   *
   * Moral of the story: populating this set is computationally
   * expensive. */
-vector<string> hash_set;
+vector<pair64> hash_set;
 
 /** Tracks where we look for the location of the
   * reference data set. */
@@ -133,8 +137,9 @@ uint16_t PORT(9120);
 
 /** A convenience class allowing us to pass multiple pieces of
     data with a void*. */
-struct clientinfo {
-    clientinfo(int32_t sfd, const char* ipaddr) : 
+struct clientinfo
+{
+    clientinfo(int32_t sfd, const char* ipaddr) :
         sock_fd(sfd), ip_address(ipaddr) {}
     int32_t sock_fd;
     string ip_address;
@@ -146,23 +151,23 @@ struct clientinfo {
 
 class is_hexit : public std::unary_function<const string&, bool>
 {
-	public:
-	is_hexit(size_t proper_len) : plen(proper_len) {}
-	bool operator()(const string& line) const
-	{
-		if (line.size() != plen)
-			return false;
+public:
+    is_hexit(size_t proper_len) : plen(proper_len) {}
+    bool operator()(const string& line) const
+    {
+        if (line.size() != plen)
+            return false;
 
-		string::const_iterator iter(line.begin());
-		const string::const_iterator end(line.end());
-		while (iter != end and 
-			((*iter >= '0' and *iter <= '9') or
-			 (*iter >= 'A' and *iter <= 'F')))
-			++iter;
-		return (iter == end) ? true : false;
-	}
-	private:
-	const size_t plen;
+        string::const_iterator iter(line.begin());
+        const string::const_iterator end(line.end());
+        while (iter != end and
+                ((*iter >= '0' and *iter <= '9') or
+                 (*iter >= 'A' and *iter <= 'F')))
+            ++iter;
+        return (iter == end) ? true : false;
+    }
+private:
+    const size_t plen;
 };
 
 /** Loads hashes from disk and stores them in a fast-accessing
@@ -173,7 +178,8 @@ void load_hashes()
     uint32_t line_count(0), hash_count(0);
     ifstream infile(RDS_LOC.c_str());
 
-    if (not infile.good()) {
+    if (not infile.good())
+    {
         syslog(WARN, "couldn't open hashes file %s",
                RDS_LOC.c_str());
         exit(EXIT_FAILURE);
@@ -185,7 +191,8 @@ void load_hashes()
     line_count += 1;
     hash_count += 1;
 
-    if (32 != firstline_size && 40 != firstline_size && 64 != firstline_size && 128 != firstline_size) {
+    if (32 != firstline_size)
+    {
         syslog(ALERT, "hash file appears corrupt!");
         syslog(ALERT, "error is in the first line.  Content follows:");
         syslog(ALERT, "%s", firstline.c_str());
@@ -196,7 +203,8 @@ void load_hashes()
         return;
     }
     is_hexit line_test(firstline_size);
-    if (! line_test(firstline)) {
+    if (! line_test(firstline))
+    {
         syslog(ALERT, "hash file appears corrupt!  Loading no hashes.");
         syslog(ALERT, "error is in the first line.  Content follows:");
         syslog(ALERT, "%s", firstline.c_str());
@@ -206,9 +214,10 @@ void load_hashes()
         exit(EXIT_FAILURE);
         return;
     }
-    hash_set.push_back(firstline);
+    hash_set.push_back(to_pair64(firstline));
 
-    while (infile) {
+    while (infile)
+    {
         // Per the C++ spec, &vector<T>[loc] is guaranteed
         // to be a T*.  (Unless it's a vector<bool>, in which
         // case you're living in such sin there's absolutely
@@ -218,11 +227,13 @@ void load_hashes()
         infile.getline(&buf[0], BUFFER_SIZE);
         line_count += 1;
         const string line(buf.begin(), find(buf.begin(), buf.end(), 0));
-        if (0 == line.size()) {
+        if (0 == line.size())
+        {
             continue;
         }
 
-        if (! line_test(line)) {
+        if (! line_test(line))
+        {
             syslog(ALERT, "hash file appears corrupt!  Loading no hashes.");
             syslog(ALERT, "offending line is #%d", line_count);
             syslog(ALERT, "offending line has %d bytes", (int) line.size());
@@ -234,11 +245,12 @@ void load_hashes()
         }
         hash_count += 1;
 
-        if (0 == hash_count % 1000000) {
+        if (0 == hash_count % 1000000)
+        {
             syslog(INFO, "loaded %u million hashes", hash_count / 1000000);
-        } 
+        }
 
-        hash_set.push_back(line);
+        hash_set.push_back(to_pair64(line));
     }
     infile.close();
     syslog(INFO, "read in %u unique hashes",
@@ -254,20 +266,22 @@ void* run_client_thread(void* arg)
     clientinfo* ci(static_cast<clientinfo*>(arg));
     const int32_t sock_fd(ci->sock_fd);
     const string ip_address(ci->ip_address);
-    
+
     // Delete the dynamically-allocated memory block.  This
     // is an inevitable line of execution after successfully
     // allocating the block in the main loop (below).
     delete ci;
 
-    if (0 != pthread_mutex_lock(&mutex)) {
+    if (0 != pthread_mutex_lock(&mutex))
+    {
         syslog(WARN, "couldn't acquire the mutex!");
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
     last_req_at = time(0);
     active_sessions += 1;
-    if (0 != pthread_mutex_unlock(&mutex)) {
+    if (0 != pthread_mutex_unlock(&mutex))
+    {
         syslog(WARN, "couldn't release the mutex!");
         close(sock_fd);
         exit(EXIT_FAILURE);
@@ -281,12 +295,14 @@ void* run_client_thread(void* arg)
 
     syslog(INFO, "disconnected from %s", ip_address.c_str());
 
-    if (0 != pthread_mutex_lock(&mutex)) {
+    if (0 != pthread_mutex_lock(&mutex))
+    {
         syslog(WARN, "couldn't acquire the mutex!");
         exit(-1);
     }
     active_sessions -= 1;
-    if (0 != pthread_mutex_unlock(&mutex)) {
+    if (0 != pthread_mutex_unlock(&mutex))
+    {
         syslog(WARN, "couldn't release the mutex!");
         exit(EXIT_FAILURE);
     }
@@ -298,17 +314,21 @@ void* run_client_thread(void* arg)
 void daemonize()
 {
     const pid_t pid(fork());
-    if (pid < 0) {
+    if (pid < 0)
+    {
         syslog(WARN, "couldn't fork!");
         exit(EXIT_FAILURE);
-    } else if (pid > 0) {
+    }
+    else if (pid > 0)
+    {
         exit(EXIT_SUCCESS);
     }
 
     syslog(INFO, "daemon started");
     umask(0);
 
-    if (setsid() < 0) {
+    if (setsid() < 0)
+    {
         syslog(WARN, "couldn't set sid");
         exit(EXIT_FAILURE);
     }
@@ -317,7 +337,8 @@ void daemonize()
     // directory to point our daemon at.  I doubt this is strictly
     // necessary, but remembering to completely rebase a daemon is
     // part of just good hacking etiquette.
-    if (0 > chdir("/")) {
+    if (0 > chdir("/"))
+    {
         syslog(WARN, "couldn't chdir to root");
         exit(EXIT_FAILURE);
     }
@@ -340,16 +361,19 @@ int32_t make_socket()
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(PORT);
 
-    if (0 > (sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))) {
+    if (0 > (sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)))
+    {
         syslog(WARN, "couldn't create a server socket");
         exit(EXIT_FAILURE);
     }
     if (0 > bind(sock, reinterpret_cast<sockaddr*>(&server),
-                 sizeof(server))) {
+                 sizeof(server)))
+    {
         syslog(WARN, "couldn't bind to port 9120");
         exit(EXIT_FAILURE);
     }
-    if (0 > listen(sock, MAX_PENDING_REQUESTS)) {
+    if (0 > listen(sock, MAX_PENDING_REQUESTS))
+    {
         syslog(WARN, "couldn't listen for clients");
         exit(EXIT_FAILURE);
     }
@@ -364,17 +388,21 @@ int32_t make_socket()
   * connected. */
 void* shutdown_handler(void*)
 {
-    while (1) {
-        if (0 != pthread_mutex_lock(&mutex)) {
+    while (1)
+    {
+        if (0 != pthread_mutex_lock(&mutex))
+        {
             syslog(WARN, "shutdown handler couldn't get mutex");
             exit(EXIT_FAILURE);
         }
         if (0 == active_sessions &&
-                (TIMEOUT < (time(0) - last_req_at))) {
+                (TIMEOUT < (time(0) - last_req_at)))
+        {
             syslog(INFO, "exiting normally due to inactivity");
             exit(EXIT_SUCCESS);
         }
-        if (0 != pthread_mutex_unlock(&mutex)) {
+        if (0 != pthread_mutex_unlock(&mutex))
+        {
             syslog(WARN, "shutdown handler couldn't release mutex");
             exit(EXIT_FAILURE);
         }
@@ -405,10 +433,12 @@ bool validate_port(const string& foo)
 bool validate_timeout(const string& foo)
 {
     int32_t timeout(is_num(foo));
-    if (0 == timeout) {
+    if (0 == timeout)
+    {
         timeout = INT_MAX;
     }
-    else if (0 < timeout) {
+    else if (0 < timeout)
+    {
         TIMEOUT = timeout;
     }
     return (0 < timeout);
@@ -433,7 +463,7 @@ void show_usage(const char* program_name)
 }
 
 /** An externally available const reference to the hash set. */
-const vector<string>& hashes(hash_set);
+const vector<pair64>& hashes(hash_set);
 
 /** An externally available const reference to the variable storing
   * whether or not status checking should be enabled. */
@@ -456,8 +486,10 @@ int main(int argc, char* argv[])
     std::auto_ptr<ifstream> infile;
     int32_t opt(0);
 
-    while (-1 != (opt = getopt(argc, argv, "bsvof:hp:t:S"))) {
-        switch (opt) {
+    while (-1 != (opt = getopt(argc, argv, "bsvof:hp:t:S")))
+    {
+        switch (opt)
+        {
         case 'v':
             cerr << argv[0] << " " << PACKAGE_VERSION << "\n\n";
             exit(0);
@@ -474,13 +506,14 @@ int main(int argc, char* argv[])
         case 'f':
             RDS_LOC = string((const char*) optarg);
             infile = std::auto_ptr<ifstream>(new ifstream(RDS_LOC.c_str()));
-            if (not infile->good()) {
+            if (not infile->good())
+            {
                 cerr <<
                      "Error: the specified dataset file could not be found.\n\n";
                 exit(EXIT_FAILURE);
             }
-	    // No explicit close: the auto_ptr will take care of that
-	    // on object destruction.
+            // No explicit close: the auto_ptr will take care of that
+            // on object destruction.
             break;
         case 'h':
             show_usage(argv[0]);
@@ -506,7 +539,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (not (validate_port(port_num) and validate_timeout(timeout))) {
+    if (not (validate_port(port_num) and validate_timeout(timeout)))
+    {
         show_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -515,23 +549,30 @@ int main(int argc, char* argv[])
         daemonize();
 
     load_hashes();
-    svr_sock = make_socket();    
+    svr_sock = make_socket();
 
     pthread_create(&shutdown_handler_id, NULL, shutdown_handler, NULL);
 
-    while (true) {
+    while (true)
+    {
         client_length = sizeof(client);
         if (0 > (client_sock = accept(svr_sock,
                                       reinterpret_cast<sockaddr*>(&client),
-                                      &client_length))) {
+                                      &client_length)))
+        {
             syslog(WARN, "dropped a connection");
-        } else {
-            try {
+        }
+        else
+        {
+            try
+            {
                 pthread_t thread_id;
                 const char* ipaddr(inet_ntoa(client.sin_addr));
                 clientinfo* data(new clientinfo(client_sock, ipaddr));
                 pthread_create(&thread_id, NULL, run_client_thread, data);
-            } catch (std::bad_alloc&) {
+            }
+            catch (std::bad_alloc&)
+            {
                 // There's no reason to have the server fall over:
                 // the sysadmin might be able to kill off whatever
                 // errant process is taking up all the RAM.

@@ -1,46 +1,47 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Nsrlsvr by rjhansen</title>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Nsrlsvr : Serves NSRL RDS hashes" />
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <script src="javascripts/scale.fix.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Nsrlsvr</title>
   </head>
+
   <body>
-    <div class="wrapper">
-      <header>
-        <h1 class="header">Nsrlsvr</h1>
-        <p class="header">Serves NSRL RDS hashes</p>
 
-        <ul>
-          <li class="download"><a class="buttons" href="https://github.com/rjhansen/nsrlsvr/zipball/master">Download ZIP</a></li>
-          <li class="download"><a class="buttons" href="https://github.com/rjhansen/nsrlsvr/tarball/master">Download TAR</a></li>
-          <li><a class="buttons github" href="https://github.com/rjhansen/nsrlsvr">View On GitHub</a></li>
-        </ul>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/rjhansen/nsrlsvr">View on GitHub</a>
 
-        <p class="header">This project is maintained by <a class="header name" href="https://github.com/rjhansen">rjhansen</a></p>
+          <h1 id="project_title">Nsrlsvr</h1>
+          <h2 id="project_tagline">Serves NSRL RDS hashes</h2>
 
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/rjhansen/nsrlsvr/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/rjhansen/nsrlsvr/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
 
-      </header>
-      <section>
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
         <h1>
 <a name="nsrlsvr" class="anchor" href="#nsrlsvr"><span class="octicon octicon-link"></span></a>nsrlsvr</h1>
 
-<p>The latest version is 1.2.1 using RDS 2.43m, and may be downloaded from the left.</p>
+<p>The latest version is 1.3 using RDS 2.43m, and may be downloaded from <a href="https://github.com/rjhansen/nsrlsvr/archive/1.3.tar.gz">here</a>.</p>
 
 <h2>
 <a name="whats-nsrlsvr" class="anchor" href="#whats-nsrlsvr"><span class="octicon octicon-link"></span></a>What’s nsrlsvr?</h2>
 
 <p>The National Institute of Standards and Technology (NIST) maintains the National Software Reference Library (NSRL) — a giant compendium of software contributed by vendors.  It’s not a library in the sense that you can check things out from it, though: it’s more a library that you can check to see whether a given file already exists.  All the system files from Windows 7 are in the NSRL, as is the latest releases of Firefox and Opera and Chrome, Winamp and…</p>
 
-<p>It's large, really large: thirty-three million distinct hashes.</p>
+<p>It's large, really large: thirty-six million distinct hashes.</p>
 
 <h2>
 <a name="whats-the-rds" class="anchor" href="#whats-the-rds"><span class="octicon octicon-link"></span></a>What’s the RDS?</h2>
@@ -55,18 +56,24 @@
 <h2>
 <a name="what-does-nsrlsvr-do" class="anchor" href="#what-does-nsrlsvr-do"><span class="octicon octicon-link"></span></a>What does <code>nsrlsvr</code> do?</h2>
 
-<p>It keeps track of 33 million hash values in an in-memory dataset and allows users to query that set at extremely high volume.  This allows an investigator using an NSRL tool (such as <code>nsrllookup</code>) to winnow through large numbers of files in a very short period of time.</p>
+<p>It keeps track of 36 million hash values in an in-memory dataset and allows users to query that set at extremely high volume.  This allows an investigator using an NSRL tool (such as <code>nsrllookup</code>) to winnow through large numbers of files in a very short period of time.</p>
 
 <h2>
 <a name="who-wrote-it" class="anchor" href="#who-wrote-it"><span class="octicon octicon-link"></span></a>Who wrote it?</h2>
 
 <p>I did — Rob Hansen, or rjhansen on GitHub.  Feel free to <a href="mailto:rjh@sixdemonbag.org?subject=nsrlsvr">email me</a>.</p>
       </section>
-      <footer>
-        <p><small>Hosted on <a href="http://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Nsrlsvr maintained by <a href="https://github.com/rjhansen">rjhansen</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-		
+
+    
+
   </body>
 </html>

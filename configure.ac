@@ -1,4 +1,4 @@
-AC_INIT([NSRL Server], [1.3], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
+AC_INIT([NSRL Server], [1.3.1], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
 AC_ARG_WITH([nsrl],
     [AS_HELP_STRING([--with-nsrl],
         [use NIST's NSRL RDS @<:@default: use the NSRL RDS@:>@])],
@@ -22,8 +22,8 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.43/rds_243m.zip
-nsrl_filename=rds_243m.zip
+RDS_URL=http://www.nsrl.nist.gov/RDS/rds_2.44/rds_244m.zip
+nsrl_filename=rds_244m.zip
 
 if test "x$nsrl" != xno ; then
   if ! test -r $nsrl ; then

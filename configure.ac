@@ -8,7 +8,7 @@ AC_ARG_WITH([custom],
     [AS_HELP_STRING([--with-custom],
         [use a custom dataset @<:@default: don't@:>@])],
     [custom=${withval}], [custom=no])
-
+AC_PROG_SED
 AM_PATH_PYTHON([2.7])
 
 if test "x$nsrl" != "xno" && test "x$custom" != "xno" ; then

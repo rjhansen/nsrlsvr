@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+#coding=UTF-8
+
+from __future__ import print_function
+
+import sys
+import re
+import os
+
+def make_append_hashes():
+    md5re = re.compile(r'"?([A-F0-9a-f]{32})"?')
+    def append_hashes(handle):
+        try:
+            nsrlfile = "@pkgdatadir@" + os.sep + "NSRLFile.txt"
+            with open(nsrlfile, "a") as outfile:
+                line = handle.readline()
+                while line:
+                    match = md5re.search(line)
+                    if match:
+                        newline = (match.group(1) + "\n").upper()
+                        outfile.write(newline.encode("UTF-8"))
+                    line = handle.readline()
+        except Exception as e:
+            print("Exception: " + str(e))
+    return append_hashes
+
+append_hashes = make_append_hashes()
+del make_append_hashes
+
+if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        append_hashes(sys.stdin)
+    else:
+        for fn in sys.argv[1:]:
+            with open(fn, "r") as handle:
+                append_hashes(handle)
+

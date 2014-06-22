@@ -152,7 +152,6 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CURL = @CURL@
 CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
@@ -197,9 +196,7 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-UNZIP = @UNZIP@
 VERSION = @VERSION@
-WGET = @WGET@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -256,8 +253,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = nsrlsvr.1
-man_MANS = nsrlsvr.1
+EXTRA_DIST = nsrlsvr.1 nsrlappend.1 nsrlupdate.1
+man_MANS = nsrlsvr.1 nsrlupdate.1 nsrlappend.1
 all: all-am
 
 .SUFFIXES:

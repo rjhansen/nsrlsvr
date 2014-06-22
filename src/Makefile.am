@@ -1,4 +1,4 @@
-EXTRA_DIST = handler.hpp Doxyfile nsrlupdate.in nsrlappend.in
+EXTRA_DIST = handler.hpp Doxyfile nsrlupdate.in nsrlappend.in NSRLFile.txt
 bin_PROGRAMS = nsrlsvr
 bin_SCRIPTS = nsrlupdate nsrlappend
 nodist_pkgdata_DATA = NSRLFile.txt

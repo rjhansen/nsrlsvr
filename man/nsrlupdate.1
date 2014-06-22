@@ -1,0 +1,29 @@
+.Dd June 29, 2014
+.Dt NSRLUPDATE 1
+.Os
+.Sh NAME
+.Nm nsrlupdate
+.Nd updates nsrlsvr's hash database
+.Sh SYNOPSIS
+.Nm nsrlupdate
+.Op Ar rds-file
+.Sh DESCRIPTION
+nsrlupdate is used to replace an existing nsrlsvr hash database with the
+contents of a new NSRL RDS file.  These files, which may be downloaded
+from http://www.nsrl.nist.gov, are released in ZIP format every few
+months.
+
+To keep your hash database up-to-date, periodically download the latest
+NSRL RDS minimal dataset (normally named rds_XYZ.zip) and run 
+nsrlupdate /path/to/rds_XYZ.zip.  Be prepared to wait a while: it's a
+big dataset.
+
+nsrlupdate will wipe out the current contents of the hash database, so
+be careful if you've used nsrlappend to add your own custom dataset!
+
+.Sh BUGS
+None known.
+.Sh SEE ALSO
+nsrlsvr(1)
+.Sh AUTHOR
+Robert J. Hansen <rjh@secret-alchemy.com>

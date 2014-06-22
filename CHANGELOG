@@ -1,3 +1,10 @@
+1.4: June 29, 2014
+    * Added two new applications: nsrlupdate and nsrlappend
+    * Changed the build process: no longer tries to grab an RDS
+
+1.3.1: May 2014
+    * Updated to RDS 2.44
+
 1.3: April 2014
     * Removed support for SHA-1, SHA-256 and SHA-512 hashes.
     * Now stores hashes internally as 128-bit binary values rather than

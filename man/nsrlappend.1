@@ -1,0 +1,25 @@
+.Dd June 29, 2014
+.Dt NSRLAPPEND 1
+.Os
+.Sh NAME
+.Nm nsrlappend
+.Nd appends new hashes to an nsrlsvr hash database
+.Sh SYNOPSIS
+.Nm nsrlappend
+.Op Ar filename
+.Sh DESCRIPTION
+nsrlappend appends new hashes to an existing nsrlsvr hash database.
+This can be useful if, for instance, you have a database of known hash
+values that are not present in the NSRL RDS which you also wish to be
+able to check for.
+
+nsrlappend can read hashes from a file, or if no filename is given,
+from standard input.  This makes it easy to do something like run
+md5deep on a directory and pipe those hashes directly to nsrlappend.
+
+.Sh BUGS
+None known.
+.Sh SEE ALSO
+nsrlsvr(1)
+.Sh AUTHOR
+Robert J. Hansen <rjh@secret-alchemy.com>

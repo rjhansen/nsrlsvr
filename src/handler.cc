@@ -21,7 +21,7 @@
  *   - If it's not 100% ISO C++11, it won't get in.
  *   - It must compile cleanly and without warnings under both GNU G++
  *     and Clang++, even with "-W -Wextra -ansi -pedantic".
- *     (Exceptions can be made for warnings that are actually complier
+ *     (Exceptions can be made for warnings that are actually compiler
  *     conformance issues: for instance, Clang++ will warn that 'long long'
  *     is a C++11 extension, even when you run it in -std=C++11 mode.)
  *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.

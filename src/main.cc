@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2014, Robert J. Hansen <rjh@secret-alchemy.com>
+ * and others.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,9 +18,12 @@
  *   That said, here are some helpful tips for people who want to submit
  *   patches:
  *
- *   - If it's not 100% ISO C++98, it won't get in.
+ *   - If it's not 100% ISO C++11, it won't get in.
  *   - It must compile cleanly and without warnings under both GNU G++
  *     and Clang++, even with "-W -Wextra -ansi -pedantic".
+ *     (Exceptions can be made for warnings that are actually complier
+ *     conformance issues: for instance, Clang++ will warn that 'long long'
+ *     is a C++11 extension, even when you run it in -std=C++11 mode.)
  *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.
  *     I like these: I think they're more readable.  Please use them.
  *   - C++ allows you to initialize variables at declaration time by
@@ -32,10 +36,12 @@
  *     documenting it.
  *
  * Contributor history:
+ *
  * Robert J. Hansen <rjh@secret-alchemy.com>
- *   - everything
+ *   - most everything
  */
 
+#include "../config.h"
 #include <sys/stat.h>
 #include <syslog.h>
 #include <set>
@@ -49,7 +55,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <memory>
+#include <tr1/memory>
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
@@ -74,6 +80,7 @@ using std::vector;
 using std::remove_if;
 using std::sort;
 using std::pair;
+using std::tr1::shared_ptr;
 
 typedef unsigned long long ULONG64;
 typedef pair<ULONG64, ULONG64> pair64;
@@ -484,7 +491,7 @@ int main(int argc, char* argv[])
     pthread_t shutdown_handler_id;
     string port_num("9120");
     string timeout("0");
-    std::auto_ptr<ifstream> infile;
+    shared_ptr<ifstream> infile;
     int32_t opt(0);
 
     while (-1 != (opt = getopt(argc, argv, "bsvof:hp:t:S")))
@@ -506,14 +513,14 @@ int main(int argc, char* argv[])
             break;
         case 'f':
             RDS_LOC = string((const char*) optarg);
-            infile = std::auto_ptr<ifstream>(new ifstream(RDS_LOC.c_str()));
+            infile = shared_ptr<ifstream>(new ifstream(RDS_LOC.c_str()));
             if (not infile->good())
             {
                 cerr <<
                      "Error: the specified dataset file could not be found.\n\n";
                 exit(EXIT_FAILURE);
             }
-            // No explicit close: the auto_ptr will take care of that
+            // No explicit close: the unique_ptr will take care of that
             // on object destruction.
             break;
         case 'h':

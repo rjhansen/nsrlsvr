@@ -18,9 +18,12 @@
  *   That said, here are some helpful tips for people who want to submit
  *   patches:
  *
- *   - If it's not 100% ISO C++98, it won't get in.
+ *   - If it's not 100% ISO C++11, it won't get in.
  *   - It must compile cleanly and without warnings under both GNU G++
  *     and Clang++, even with "-W -Wextra -ansi -pedantic".
+ *     (Exceptions can be made for warnings that are actually complier
+ *     conformance issues: for instance, Clang++ will warn that 'long long'
+ *     is a C++11 extension, even when you run it in -std=C++11 mode.)
  *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.
  *     I like these: I think they're more readable.  Please use them.
  *   - C++ allows you to initialize variables at declaration time by
@@ -40,6 +43,7 @@
  *   - patch to log how many hashes are in each QUERY statement
  */
 
+#include "../config.h"
 #include <string>
 #include <set>
 #include <vector>
@@ -54,6 +58,7 @@
 #include <syslog.h>
 #include <inttypes.h>
 #include <utility>
+#include <tr1/memory>
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 
@@ -81,7 +86,7 @@ using std::not1;
 using std::equal_to;
 using std::ptr_fun;
 using std::remove;
-using std::auto_ptr;
+using std::tr1::shared_ptr;
 using std::exception;
 using std::binary_search;
 using std::pair;
@@ -177,21 +182,21 @@ public:
         write_line(string(line));
     }
 
-    /** Reads a line from the socket.  Returns an auto_ptr<string>
+    /** Reads a line from the socket.  Returns an shared_ptr<string>
       * because clients might be sending arbitrarily-sized (i.e.,
       * really huge) data to us.  Passing smartpointers around is
       * ridiculously faster than copying huge blocks of memory.
       *
       * Arguably this should return a shared_ptr<string>, but a lot
       * of C++ compilers have shaky support for TR1.  Instead we use
-      * the lowest common denominator: std::auto_ptr.
+      * the lowest common denominator: std::tr1::shared_ptr.
       *
       * This function replaces the old operator().
       *
       * @since 1.1
-      * @return An auto_ptr<string> representing one line read from
+      * @return An shared_ptr<string> representing one line read from
       * the file descriptor.*/
-    auto_ptr<string> read_line()
+    shared_ptr<string> read_line()
     {
         /* "But in Latin, Jehovah begins with the letter 'I'..."
          *
@@ -234,7 +239,7 @@ public:
                                              buffer.end(), '\n');
                 if (iter != buffer.end())
                 {
-                    auto_ptr<string> rv(new string(buffer.begin(), iter));
+                    shared_ptr<string> rv(new string(buffer.begin(), iter));
                     rv->erase(remove(rv->begin(),
                                      rv->end(),
                                      '\r'),
@@ -276,10 +281,10 @@ private:
   *
   * @param line A pointer to the line to tokenize
   * @param character The delimiter character
-  * @returns An auto_ptr to a vector of strings representing tokens */
-auto_ptr<vector<string> > tokenize(string& line, char character = ' ')
+  * @returns An shared_ptr to a vector of strings representing tokens */
+shared_ptr<vector<string> > tokenize(string& line, char character = ' ')
 {
-    auto_ptr<vector<string> > rv(new vector<string>());
+    shared_ptr<vector<string> > rv(new vector<string>());
     transform(line.begin(), line.end(), line.begin(), toupper);
 
     string::iterator begin(find_if(line.begin(), line.end(),
@@ -322,8 +327,8 @@ auto_ptr<vector<string> > tokenize(string& line, char character = ' ')
   *
   * @param line A pointer to the line to tokenize
   * @param character The delimiter character
-  * @returns An auto_ptr to a vector of strings representing tokens */
-auto_ptr<vector<string> > tokenize(auto_ptr<string> line, char ch = ' ')
+  * @returns A shared_ptr to a vector of strings representing tokens */
+shared_ptr<vector<string> > tokenize(shared_ptr<string> line, char ch = ' ')
 {
     return tokenize(*line, ch);
 }
@@ -337,12 +342,12 @@ auto_ptr<vector<string> > tokenize(auto_ptr<string> line, char ch = ' ')
   * failure.
   * @author Rob Hansen
   * @since 0.9 */
-int32_t parse_version(auto_ptr<string> line)
+int32_t parse_version(shared_ptr<string> line)
 {
     int32_t version(0);
     int32_t this_token(0);
-    auto_ptr<vector<string> > tokens(tokenize(line));
-    auto_ptr<vector<string> > version_tokens;
+    shared_ptr<vector<string> > tokens(tokenize(line)) ;
+    shared_ptr<vector<string> > version_tokens;
     size_t index(0);
 
     if (tokens->size() != 2 or
@@ -429,7 +434,7 @@ void handle_protocol_10(SocketIO& sio, const char* ip_addr)
 
     try
     {
-        auto_ptr<vector<string> > commands(tokenize(sio.read_line()));
+        shared_ptr<vector<string> > commands(tokenize(sio.read_line()));
 
         if (commands->size() < 2 or commands->at(0) != "QUERY")
         {
@@ -494,7 +499,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
 
     try
     {
-        auto_ptr<vector<string> > commands(tokenize(sio.read_line()));
+        shared_ptr<vector<string> > commands(tokenize(sio.read_line()));
         while (commands->size() >= 1)
         {
             string return_seq("");

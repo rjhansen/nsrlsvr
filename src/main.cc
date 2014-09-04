@@ -306,6 +306,7 @@ void* run_client_thread(void* arg)
         syslog(WARN, "couldn't release the mutex!");
         exit(EXIT_FAILURE);
     }
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -566,6 +567,7 @@ int main(int argc, char* argv[])
         {
             try
             {
+                
                 pthread_t thread_id;
                 const char* ipaddr(inet_ntoa(client.sin_addr));
                 clientinfo* data(new clientinfo(client_sock, ipaddr));

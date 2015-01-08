@@ -58,7 +58,7 @@
 #include <syslog.h>
 #include <inttypes.h>
 #include <utility>
-#include <tr1/memory>
+#include <memory>
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 
@@ -86,7 +86,7 @@ using std::not1;
 using std::equal_to;
 using std::ptr_fun;
 using std::remove;
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 using std::exception;
 using std::binary_search;
 using std::pair;
@@ -96,7 +96,6 @@ typedef pair<ULONG64, ULONG64> pair64;
 
 extern const vector<pair64>& hashes;
 extern const bool& enable_status;
-extern const bool& only_old;
 
 namespace
 {
@@ -157,7 +156,7 @@ public:
       *
       * @param fd File descriptor to read on */
     SocketIO(int32_t fd) :
-        sock_fd(fd), buffer(""), tmp_buf(65536, '\0') {}
+        sock_fd { fd }, buffer {""}, tmp_buf(65536, '\0') {}
 
     /** Writes a line of text to the socket.  The caller is
       * responsible for ensuring the text has a '\r\n' appended.
@@ -186,11 +185,7 @@ public:
       * because clients might be sending arbitrarily-sized (i.e.,
       * really huge) data to us.  Passing smartpointers around is
       * ridiculously faster than copying huge blocks of memory.
-      *
-      * Arguably this should return a shared_ptr<string>, but a lot
-      * of C++ compilers have shaky support for TR1.  Instead we use
-      * the lowest common denominator: std::tr1::shared_ptr.
-      *
+      * 
       * This function replaces the old operator().
       *
       * @since 1.1
@@ -282,33 +277,33 @@ private:
   * @param line A pointer to the line to tokenize
   * @param character The delimiter character
   * @returns An shared_ptr to a vector of strings representing tokens */
-shared_ptr<vector<string> > tokenize(string& line, char character = ' ')
+auto tokenize(string& line, char character = ' ')
 {
-    shared_ptr<vector<string> > rv(new vector<string>());
+    shared_ptr<vector<string>> rv { new vector<string>() };
     transform(line.begin(), line.end(), line.begin(), toupper);
 
-    string::iterator begin(find_if(line.begin(), line.end(),
+    auto begin(find_if(line.cbegin(), line.cend(),
                                    not1(bind2nd(equal_to<char>(),
                                            character))));
-    string::iterator end(
-        (begin != line.end())
-        ? find(begin + 1, line.end(), character)
-        : line.end()
+    auto end(
+        (begin != line.cend())
+        ? find(begin + 1, line.cend(), character)
+        : line.cend()
     );
 
-    while (begin != line.end())
+    while (begin != line.cend())
     {
         rv->push_back(string(begin, end));
-        if (end == line.end())
+        if (end == line.cend())
         {
-            begin = line.end();
+            begin = line.cend();
             continue;
         }
-        begin = find_if(end + 1, line.end(),
+        begin = find_if(end + 1, line.cend(),
                         not1(bind2nd(equal_to<char>(), character)));
-        end = (begin != line.end())
-              ? find(begin + 1, line.end(), character)
-              : line.end();
+        end = (begin != line.cend())
+              ? find(begin + 1, line.cend(), character)
+              : line.cend();
     }
     return rv;
 }
@@ -328,7 +323,7 @@ shared_ptr<vector<string> > tokenize(string& line, char character = ' ')
   * @param line A pointer to the line to tokenize
   * @param character The delimiter character
   * @returns A shared_ptr to a vector of strings representing tokens */
-shared_ptr<vector<string> > tokenize(shared_ptr<string> line, char ch = ' ')
+auto tokenize(shared_ptr<string> line, char ch = ' ')
 {
     return tokenize(*line, ch);
 }
@@ -342,25 +337,24 @@ shared_ptr<vector<string> > tokenize(shared_ptr<string> line, char ch = ' ')
   * failure.
   * @author Rob Hansen
   * @since 0.9 */
-int32_t parse_version(shared_ptr<string> line)
+auto parse_version(shared_ptr<string> line)
 {
     int32_t version(0);
     int32_t this_token(0);
-    shared_ptr<vector<string> > tokens(tokenize(line)) ;
-    shared_ptr<vector<string> > version_tokens;
+    auto tokens = tokenize(line);
     size_t index(0);
 
     if (tokens->size() != 2 or
             tokens->at(0) != "VERSION:")
     {
-        goto PARSE_VERSION_BAIL_BAD;
+		return -1;
     }
 
-    version_tokens = tokenize(tokens->at(1), '.');
+    auto version_tokens = tokenize(tokens->at(1), '.');
 
     if (version_tokens->size() < 1 or version_tokens->size() > 4)
     {
-        goto PARSE_VERSION_BAIL_BAD;
+		return -1;
     }
 
     while (version_tokens->size() != 4)
@@ -375,22 +369,16 @@ int32_t parse_version(shared_ptr<string> line)
                                    thing.end(),
                                    not1(ptr_fun(::isdigit))))
         {
-            goto PARSE_VERSION_BAIL_BAD;
+			return -1;
         }
         this_token = atoi(thing.c_str());
         if (this_token < 0 or this_token > 254)
         {
-            goto PARSE_VERSION_BAIL_BAD;
+			return -1;
         }
         version = (version << 8) + this_token;
     }
-    goto PARSE_VERSION_BAIL;
-
-PARSE_VERSION_BAIL_BAD:
-    version = -1;
-
-PARSE_VERSION_BAIL:
-    return version;
+	return version;
 }
 
 
@@ -401,15 +389,13 @@ PARSE_VERSION_BAIL:
   * @returns true if it could be an MD5 or SHA-1 digest, false otherwise
   * @since 0.9
   * @author Rob Hansen */
-bool ishexdigest(const string& digest)
+auto ishexdigest(const string& digest)
 {
-    string::const_iterator iter(digest.begin());
-
-    if (not (digest.size() == 40 or digest.size() == 32))
+    if (digest.size() != 32)
     {
         return false;
     }
-    for ( ; iter != digest.end() ; ++iter)
+    for (auto iter = digest.cbegin() ; iter != digest.cend() ; ++iter)
     {
         bool is_number = (*iter >= '0' and *iter <= '9');
         bool is_letter = (*iter >= 'A' and *iter <= 'F');
@@ -417,73 +403,6 @@ bool ishexdigest(const string& digest)
             return false;
     }
     return true;
-}
-
-/** Performs a transaction with a client.  Adheres to protocol
-  * version 1.0.
-  *
-  * @param sio The socket to listen and respond on
-  * @param ip_addr The IP address of the remote host
-  * @since 0.9 */
-void handle_protocol_10(SocketIO& sio, const char* ip_addr)
-{
-    string return_seq("");
-    uint32_t found(0);
-    double frac(0.0);
-    uint32_t total_queries(0);
-
-    try
-    {
-        shared_ptr<vector<string> > commands(tokenize(sio.read_line()));
-
-        if (commands->size() < 2 or commands->at(0) != "QUERY")
-        {
-            sio.write_line("NOT OK\r\n");
-            return;
-        }
-
-        for (size_t index = 1 ; index < commands->size() ; ++index)
-        {
-            if (not ishexdigest(commands->at(index)))
-            {
-                sio.write_line("NOT OK\r\n");
-                return;
-            }
-            if (binary_search(hashes.begin(), hashes.end(),
-                              to_pair64(commands->at(index))))
-            {
-                return_seq += "1";
-                found += 1;
-            }
-            else
-            {
-                return_seq += "0";
-            }
-        }
-
-        total_queries = commands->size() -
-                        (commands->size() > 0 ? 1 : 0);
-
-        if (total_queries)
-        {
-            double numerator(100 * found);
-            double denominator(total_queries);
-            frac = numerator / denominator;
-        }
-
-        syslog(INFO,
-               "%s: protocol 1.0, found %u of %u hashes (%.1f%%), closed normally",
-               ip_addr,
-               found,
-               total_queries,
-               frac);
-        return_seq = "OK " + return_seq + "\r\n";
-        sio.write_line(return_seq);
-    }
-    catch (exception&)
-    {
-        return;
-    }
 }
 
 /** Performs a transaction with a client.  Adheres to protocol
@@ -526,8 +445,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 syslog(INFO,
                        "%s asked for a protocol downgrade to 1.0",
                        ip_addr);
-                sio.write_line("OK\r\n");
-                handle_protocol_10(sio, ip_addr);
+                sio.write_line("NOT qOK\r\n");
                 return;
             }
 
@@ -632,21 +550,15 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
   *
   * @param fd the client's socket file descriptor
   * @since 0.9 */
-void handle_client(const int32_t fd, const string& ip_addr)
+void handle_client(const int32_t fd, const string ip_addr)
 {
     SocketIO sio(fd);
 
     try
     {
-        int32_t version(parse_version(sio.read_line()));
-        if (version > 0 and version <= 0x01000000)
-        {
-            sio.write_line("OK\r\n");
-            handle_protocol_10(sio, ip_addr.c_str());
-        }
-        else if (version > 0x01000000 and
-                 version <= 0x02000000 and
-                 not only_old)
+        int32_t version { parse_version(sio.read_line()) };
+        if (version > 0x01000000 and
+                 version <= 0x02000000)
         {
             sio.write_line("OK\r\n");
             handle_protocol_20(sio, ip_addr.c_str());

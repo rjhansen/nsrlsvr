@@ -16,6 +16,6 @@
 #include <string>
 #include <utility>
 
-void handle_client(int32_t, const std::string&);
+void handle_client(int32_t, const std::string);
 std::pair<unsigned long long, unsigned long long> to_pair64(std::string);
 

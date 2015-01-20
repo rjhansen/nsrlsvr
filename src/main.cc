@@ -313,7 +313,7 @@ void parse_options(int argc, char* argv[])
         case 'f':
 			{
             	RDS_LOC = string((const char*) optarg);
-            	auto infile = ifstream(RDS_LOC.c_str());
+            	ifstream infile { RDS_LOC.c_str() };
             	if (not infile)
             	{
                 	cerr <<

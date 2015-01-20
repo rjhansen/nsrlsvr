@@ -384,10 +384,9 @@ SERVER_LOOP:
     }
 
 	string ipaddr { inet_ntoa(client.sin_addr) };
-	if (0 == fork()) {
+    if (0 == fork()) {
 		handle_client(client_sock, ipaddr);
-    } else {
-        close(client_sock);
-        goto SERVER_LOOP;
+        return 0;
     }
+    goto SERVER_LOOP;
 }

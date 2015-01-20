@@ -59,6 +59,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <utility>
+#include <signal.h>
 
 /* Additional defines necessary on FreeBSD: */
 /* Necessary for sockaddr and sockaddr_in structures */

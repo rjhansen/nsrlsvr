@@ -379,15 +379,14 @@ SERVER_LOOP:
                                   &client_length)))
     {
         syslog(WARN, "dropped a connection");
-    }
-    else
-    {
-		string ipaddr { inet_ntoa(client.sin_addr) };
-		if (0 == fork()) {
-			in_parent = false;
-			handle_client(client_sock, ipaddr);
-        }
-    }
-    if (in_parent)
         goto SERVER_LOOP;
+    }
+
+	string ipaddr { inet_ntoa(client.sin_addr) };
+	if (0 == fork()) {
+		handle_client(client_sock, ipaddr);
+    } else {
+        close(client_sock);
+        goto SERVER_LOOP;
+    }
 }

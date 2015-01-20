@@ -58,7 +58,6 @@
 #include <syslog.h>
 #include <inttypes.h>
 #include <utility>
-#include <memory>
 
 #define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 

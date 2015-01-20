@@ -157,13 +157,14 @@ public:
       * @param fd File descriptor to read on */
     SocketIO(int32_t fd) :
         sock_fd { fd }, buffer {""}, tmp_buf(65536, '\0') {}
+	~SocketIO() { close(sock_fd); }
 
     /** Writes a line of text to the socket.  The caller is
       * responsible for ensuring the text has a '\r\n' appended.
       *
       * @param line The line to write
       * @since 1.1 */
-    void write_line(string line) const
+    void write_line(const string& line) const
     {
         if (-1 == write(sock_fd, line.c_str(), line.size()))
         {
@@ -178,20 +179,18 @@ public:
       * @since 1.1 */
     void write_line(const char* line) const
     {
-        write_line(string(line));
+		string foo(line);
+        write_line(foo);
     }
 
-    /** Reads a line from the socket.  Returns an shared_ptr<string>
-      * because clients might be sending arbitrarily-sized (i.e.,
-      * really huge) data to us.  Passing smartpointers around is
-      * ridiculously faster than copying huge blocks of memory.
-      * 
+    /** Reads a line from the socket.  
+	  * 
       * This function replaces the old operator().
       *
       * @since 1.1
-      * @return An shared_ptr<string> representing one line read from
+      * @return A string representing one line read from
       * the file descriptor.*/
-    shared_ptr<string> read_line()
+    string read_line()
     {
         /* "But in Latin, Jehovah begins with the letter 'I'..."
          *
@@ -234,15 +233,15 @@ public:
                                              buffer.end(), '\n');
                 if (iter != buffer.end())
                 {
-                    shared_ptr<string> rv(new string(buffer.begin(), iter));
-                    rv->erase(remove(rv->begin(),
-                                     rv->end(),
+                    string rv(buffer.begin(), iter);
+                    rv.erase(remove(rv.begin(),
+                                     rv.end(),
                                      '\r'),
-                              rv->end());
-                    rv->erase(remove(rv->begin(),
-                                     rv->end(),
+                              rv.end());
+                    rv.erase(remove(rv.begin(),
+                                     rv.end(),
                                      '\n'),
-                              rv->end());
+                              rv.end());
                     buffer = string(iter + 1, buffer.end());
                     return rv;
                 }
@@ -279,7 +278,7 @@ private:
   * @returns An shared_ptr to a vector of strings representing tokens */
 auto tokenize(string& line, char character = ' ')
 {
-    shared_ptr<vector<string>> rv { new vector<string>() };
+    vector<string> rv;
     transform(line.begin(), line.end(), line.begin(), toupper);
 
     auto begin(find_if(line.cbegin(), line.cend(),
@@ -293,7 +292,7 @@ auto tokenize(string& line, char character = ' ')
 
     while (begin != line.cend())
     {
-        rv->push_back(string(begin, end));
+        rv.push_back(string(begin, end));
         if (end == line.cend())
         {
             begin = line.cend();
@@ -308,26 +307,6 @@ auto tokenize(string& line, char character = ' ')
     return rv;
 }
 
-/** A hand-rolled string tokenizer in C++.
-  *
-  * Efficient string tokenization in 29 lines, without absurd
-  * contortions of code.  Booyah.  Given the state of things in C,
-  * where on some platforms strtok is outright obsoleted by strsep
-  * and on other platforms strsep is just a distant promise of what
-  * the future might hold... I'll take this way.
-  *
-  * Returns a smartpointer to a vector for the same reason
-  * SocketIO::read_line() returns one: to spare us the
-  * otherwise absurd amount of memcpying that would be going on.
-  *
-  * @param line A pointer to the line to tokenize
-  * @param character The delimiter character
-  * @returns A shared_ptr to a vector of strings representing tokens */
-auto tokenize(shared_ptr<string> line, char ch = ' ')
-{
-    return tokenize(*line, ch);
-}
-
 /** Turns a string of 'a.b.c.d', ala dotted-quad style, into a
   * 32-bit integer.  'a' must be present: if b through d are
   * omitted, they are assumed to be zero.
@@ -337,34 +316,34 @@ auto tokenize(shared_ptr<string> line, char ch = ' ')
   * failure.
   * @author Rob Hansen
   * @since 0.9 */
-auto parse_version(shared_ptr<string> line)
+auto parse_version(string line)
 {
-    int32_t version(0);
-    int32_t this_token(0);
+    int32_t version { 0 };
+    int32_t this_token { 0 };
     auto tokens = tokenize(line);
-    size_t index(0);
+    size_t index { 0 };
 
-    if (tokens->size() != 2 or
-            tokens->at(0) != "VERSION:")
+    if (tokens.size() != 2 or
+            tokens.at(0) != "VERSION:")
     {
 		return -1;
     }
 
-    auto version_tokens = tokenize(tokens->at(1), '.');
+    auto version_tokens = tokenize(tokens.at(1), '.');
 
-    if (version_tokens->size() < 1 or version_tokens->size() > 4)
+    if (version_tokens.size() < 1 or version_tokens.size() > 4)
     {
 		return -1;
     }
 
-    while (version_tokens->size() != 4)
+    while (version_tokens.size() != 4)
     {
-        version_tokens->push_back("0");
+        version_tokens.push_back("0");
     }
 
     for (index = 0 ; index < 4 ; ++index)
     {
-        string& thing(version_tokens->at(index));
+        string& thing(version_tokens.at(index));
         if (thing.end() != find_if(thing.begin(),
                                    thing.end(),
                                    not1(ptr_fun(::isdigit))))
@@ -418,12 +397,13 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
 
     try
     {
-        shared_ptr<vector<string> > commands(tokenize(sio.read_line()));
-        while (commands->size() >= 1)
+		string line = sio.read_line();
+        vector<string> commands = tokenize(line);
+        while (commands.size() >= 1)
         {
             string return_seq("");
 
-            if ("BYE" == commands->at(0))
+            if ("BYE" == commands.at(0))
             {
                 if (total_queries)
                 {
@@ -440,16 +420,16 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 return;
             }
 
-            else if ("DOWNSHIFT" == commands->at(0))
+            else if ("DOWNSHIFT" == commands.at(0))
             {
                 syslog(INFO,
                        "%s asked for a protocol downgrade to 1.0",
                        ip_addr);
-                sio.write_line("NOT qOK\r\n");
+                sio.write_line("NOT OK\r\n");
                 return;
             }
 
-            else if ("UPSHIFT" == commands->at(0))
+            else if ("UPSHIFT" == commands.at(0))
             {
                 syslog(INFO,
                        "%s asked for a protocol upgrade (refused)",
@@ -457,9 +437,9 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 sio.write_line("NOT OK\r\n");
             }
 
-            else if ("QUERY" == commands->at(0))
+            else if ("QUERY" == commands.at(0))
             {
-                if (commands->size() == 1)
+                if (commands.size() == 1)
                 {
                     sio.write_line("NOT OK\r\n");
                     return;
@@ -467,15 +447,15 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 else
                 {
                     size_t index(1);
-                    for ( ; index < commands->size() ; ++index)
+                    for ( ; index < commands.size() ; ++index)
                     {
-                        if (not ishexdigest(commands->at(index)))
+                        if (not ishexdigest(commands.at(index)))
                         {
                             sio.write_line("NOT OK\r\n");
                             return;
                         }
                         if (binary_search(hashes.begin(), hashes.end(),
-                                          to_pair64(commands->at(index))))
+                                          to_pair64(commands.at(index))))
                         {
                             return_seq += "1";
                             found += 1;
@@ -486,11 +466,11 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                         }
                     }
                     return_seq = "OK " + return_seq + "\r\n";
-                    total_queries += commands->size() - 1;
+                    total_queries += commands.size() - 1;
                 }
             }
 
-            else if ("STATUS" == commands->at(0) and enable_status)
+            else if ("STATUS" == commands.at(0) and enable_status)
             {
                 double loadavg[3] = { 0.0, 0.0, 0.0 };
                 char buf[1024];
@@ -512,7 +492,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                        ip_addr,
                        buf);
             }
-            else if ("STATUS" == commands->at(0))
+            else if ("STATUS" == commands.at(0))
             {
                 syslog(INFO,
                        "%s asked for server status (refused)",
@@ -525,7 +505,8 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                 return;
             }
             sio.write_line(return_seq);
-            commands = tokenize(sio.read_line());
+			line = sio.read_line();
+            commands = tokenize(line);
         }
     }
     catch (exception&)
@@ -552,16 +533,15 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
   * @since 0.9 */
 void handle_client(const int32_t fd, const string ip_addr)
 {
-    SocketIO sio(fd);
-
     try
     {
+		SocketIO sio { fd };
         int32_t version { parse_version(sio.read_line()) };
-        if (version > 0x01000000 and
-                 version <= 0x02000000)
+        if (version == 0x02000000)
         {
             sio.write_line("OK\r\n");
             handle_protocol_20(sio, ip_addr.c_str());
+			close(fd);
         }
         else
         {
@@ -570,6 +550,6 @@ void handle_client(const int32_t fd, const string ip_addr)
     }
     catch (exception&)
     {
-        return;
+		// pass; just go through, close the socket, and quit
     }
 }

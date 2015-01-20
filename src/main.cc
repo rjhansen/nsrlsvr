@@ -40,6 +40,7 @@
  */
 
 #include "../config.h"
+#include <sstream>
 #include <sys/stat.h>
 #include <syslog.h>
 #include <set>
@@ -66,6 +67,7 @@
 #include <netinet/in.h>
 #endif
 
+using std::stringstream;
 using std::string;
 using std::set;
 using std::transform;
@@ -104,7 +106,7 @@ bool status_enabled { false };
 bool standalone { false };
 
 /** Our set of hashes, represented as a block of contiguous memory.
-  * Note that the current NSRL library contains approximately 32
+  * Note that the current NSRL library contains approximately 40
   * million values, each at roughly 32 bytes (rounded to binary
   * powers to make the math easier).  This is 2**25 values times
   * 2**5 bytes each = 2**30 bytes, or about a gig of RAM.
@@ -115,34 +117,27 @@ vector<pair64> hash_set;
 
 /** Tracks where we look for the location of the
   * reference data set. */
-string RDS_LOC { PKGDATADIR "/NSRLFile.txt" };
+string RDS_LOC { PKGDATADIR "/hashes.txt" };
 
 /** Which port to listen on */
 uint16_t PORT { 9120 };
 
 /** Determines whether a string represents a valid uppercase
-  * hexadecimal digit. */
+  * MD5 hash. */
 
-class is_hexit : public std::unary_function<const string&, bool>
+auto good_line(const string& line)
 {
-public:
-    is_hexit(size_t proper_len) : plen { proper_len } {}
-    auto operator()(const string& line) const
-    {
-        if (line.size() != plen)
-            return false;
+    if (line.size() != 32)
+        return false;
 
-        auto iter = line.cbegin();
-        auto end = line.cend();
-        while (iter != end and
-                ((*iter >= '0' and *iter <= '9') or
-                 (*iter >= 'A' and *iter <= 'F')))
-            ++iter;
-        return (iter == end) ? true : false;
-    }
-private:
-    const size_t plen;
-};
+    auto iter = line.cbegin();
+    auto end = line.cend();
+    while (iter != end and
+            ((*iter >= '0' and *iter <= '9') or
+             (*iter >= 'A' and *iter <= 'F')))
+        ++iter;
+    return (iter == end) ? true : false;
+}
 
 /** Loads hashes from disk and stores them in a fast-accessing
   * in-memory data structure.  This will be slow. */
@@ -151,6 +146,8 @@ void load_hashes()
     vector<char> buf(BUFFER_SIZE, 0);
     uint32_t line_count { 0 }, hash_count { 0 };
     ifstream infile { RDS_LOC.c_str() };
+	
+	hash_set.reserve(40000000);
 
     if (not infile)
     {
@@ -159,38 +156,19 @@ void load_hashes()
         exit(EXIT_FAILURE);
     }
 
-    infile.getline(&buf[0], BUFFER_SIZE);
-    const string firstline(buf.cbegin(), find(buf.cbegin(), buf.cend(), 0));
-    const auto firstline_size = firstline.size();
-	is_hexit line_test(32);
-    line_count += 1;
-    hash_count += 1;
-
-    if (! (32 == firstline_size and line_test(firstline)))
-    {
-        syslog(ALERT, "hash file appears corrupt!");
-        syslog(ALERT, "error is in the first line.  Content follows:");
-        syslog(ALERT, "%s", firstline.c_str());
-        syslog(ALERT, "length of line = %d", (int)(firstline_size));
-        syslog(ALERT, "shutting down!");
-        infile.close();
-        exit(EXIT_FAILURE);
-        return;
-    }
-    hash_set.push_back(to_pair64(firstline));
-
     while (infile)
     {
         memset(static_cast<void*>(&buf[0]), 0, BUFFER_SIZE);
         infile.getline(&buf[0], BUFFER_SIZE);
         line_count += 1;
         const string line(buf.cbegin(), find(buf.cbegin(), buf.cend(), 0));
+		
         if (0 == line.size())
         {
             continue;
         }
 
-        if (! line_test(line))
+        if (! good_line(line))
         {
             syslog(ALERT, "hash file appears corrupt!  Loading no hashes.");
             syslog(ALERT, "offending line is #%d", line_count);
@@ -297,14 +275,6 @@ auto is_num(const string& num)
            : -1;
 }
 
-/** Checks a string to see whether it's a port in the range
-  * (1024, 65535) inclusive (i.e., in userspace). */
-auto validate_port(const string& foo)
-{
-    PORT = is_num(foo) & 0xFFFF;
-    return (PORT >= 1024);
-}
-
 void show_usage(const char* program_name)
 {
     cerr <<
@@ -318,28 +288,11 @@ void show_usage(const char* program_name)
          "-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
     exit(EXIT_FAILURE);
 }
-}
-/** An externally available const reference to the hash set. */
-const vector<pair64>& hashes { hash_set };
 
-/** An externally available const reference to the variable storing
-  * whether or not status checking should be enabled. */
-const bool& enable_status { status_enabled };
-
-
-/** magic happens here */
-int main(int argc, char* argv[])
+void parse_options(int argc, char* argv[])
 {
-    int32_t svr_sock(0);
-    int32_t client_sock(0);
-    sockaddr_in client;
-    uint32_t client_length(0);
-    pthread_t shutdown_handler_id;
-    string port_num("9120");
-    string timeout("0");
-    unique_ptr<ifstream> infile;
-    int32_t opt(0);
-
+    int32_t opt { 0 };
+    
     while (-1 != (opt = getopt(argc, argv, "bsvof:hp:t:S")))
     {
         switch (opt)
@@ -358,22 +311,33 @@ int main(int argc, char* argv[])
             exit(0);
             break;
         case 'f':
-            RDS_LOC = string((const char*) optarg);
-            infile = unique_ptr<ifstream>(new ifstream(RDS_LOC.c_str()));
-            if (not infile->good())
-            {
-                cerr <<
-                     "Error: the specified dataset file could not be found.\n\n";
-                exit(EXIT_FAILURE);
-            }
-            // No explicit close: the unique_ptr will take care of that
-            // on object destruction.
+			{
+            	RDS_LOC = string((const char*) optarg);
+            	auto infile = ifstream(RDS_LOC.c_str());
+            	if (not infile)
+            	{
+                	cerr <<
+                    	 "Error: the specified dataset file could not be found.\n\n";
+                	exit(EXIT_FAILURE);
+            	}
+			}
             break;
         case 'h':
             show_usage(argv[0]);
+            exit(0);
             break;
         case 'p':
-            port_num = string(optarg);
+			{
+            	auto port_num = string(optarg);
+				stringstream ss;
+				ss << port_num;
+				ss >> PORT;
+				if (! ss)
+				{
+					show_usage(argv[0]);
+					exit(EXIT_FAILURE);
+				}
+			}
             break;
         case 's':
             status_enabled = true;
@@ -382,31 +346,48 @@ int main(int argc, char* argv[])
             show_usage(argv[0]);
             exit(EXIT_FAILURE);
         }
-    }
+    }    
+}
 
-    if (not validate_port(port_num))
-    {
-        show_usage(argv[0]);
-        exit(EXIT_FAILURE);
-    }
+}
+/** An externally available const reference to the hash set. */
+const vector<pair64>& hashes { hash_set };
 
+/** An externally available const reference to the variable storing
+  * whether or not status checking should be enabled. */
+const bool& enable_status { status_enabled };
+
+
+/** magic happens here */
+int main(int argc, char* argv[])
+{
+    parse_options(argc, argv);
     daemonize();
     load_hashes();
-    svr_sock = make_socket();
-
-    while (true)
+    
+	int32_t client_sock {0};
+    int32_t svr_sock { make_socket() };
+	sockaddr_in client;
+	socklen_t client_length { sizeof(client) };
+    bool in_parent = true;
+    
+    signal(SIGCHLD, SIG_IGN);
+    
+SERVER_LOOP:
+    if (0 > (client_sock = accept(svr_sock,
+                                  reinterpret_cast<sockaddr*>(&client),
+                                  &client_length)))
     {
-        client_length = sizeof(client);
-        if (0 > (client_sock = accept(svr_sock,
-                                      reinterpret_cast<sockaddr*>(&client),
-                                      &client_length)))
-        {
-            syslog(WARN, "dropped a connection");
-        }
-        else
-        {
-			string ipaddr { inet_ntoa(client.sin_addr) };
-			if (0 == fork()) handle_client(client_sock, ipaddr);
+        syslog(WARN, "dropped a connection");
+    }
+    else
+    {
+		string ipaddr { inet_ntoa(client.sin_addr) };
+		if (0 == fork()) {
+			in_parent = false;
+			handle_client(client_sock, ipaddr);
         }
     }
+    if (in_parent)
+        goto SERVER_LOOP;
 }

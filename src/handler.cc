@@ -490,6 +490,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                        "%s asked for server status (sent '%s')",
                        ip_addr,
                        buf);
+                sio.write_line(return_seq);
                 return;
             }
             else if ("STATUS" == commands.at(0))
@@ -498,6 +499,7 @@ void handle_protocol_20(SocketIO& sio, const char* ip_addr)
                        "%s asked for server status (refused)",
                        ip_addr);
                 return_seq = "OK NOT SUPPORTED\r\n";
+                sio.write_line(return_seq);
                 return;
             }
             else

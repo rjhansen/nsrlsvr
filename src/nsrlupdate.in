@@ -29,7 +29,7 @@ def make_processor():
             fn = tempfile.gettempdir() + os.sep + "minimal" +\
                 os.sep + "NSRLFile.txt"
             with open(fn, "r") as fh:
-                with open("@pkgdatadir@" + os.sep + "NSRLFile.txt", "w") as output:
+                with open("@pkgdatadir@" + os.sep + "hashes.txt", "w") as output:
                     hashcount = 0
                     line = fh.readline()
                     while line:

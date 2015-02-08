@@ -283,7 +283,7 @@ void show_usage(const char* program_name)
          "-v : print version information\n" <<
          "-b : get information on reporting bugs\n" <<
          "-f : specify an alternate RDS (default: "<< PKGDATADIR <<
-         "/NSRLFile.txt)\n" <<
+         "/hashes.txt)\n" <<
          "-s : allow clients to query server status (default: disabled)\n" <<
          "-h : show this help message\n" <<
          "-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";

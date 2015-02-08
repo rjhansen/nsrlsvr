@@ -1,5 +1,7 @@
 Robert J. Hansen <rjh@secret-alchemy.com>
     * nsrlsvr
 
-
+Early on, Jesse Kornblum provided some patches to improve reporting.
+His code has since been overtaken by other code, but I'm grateful
+for his work early on in nsrlsvr's life.  :)
 

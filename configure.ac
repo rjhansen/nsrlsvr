@@ -37,4 +37,3 @@ if test "x$warning" == "xyes" ; then
 ***
 ]);
 fi
-

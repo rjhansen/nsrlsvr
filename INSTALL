@@ -14,10 +14,13 @@ Installation instructions:
 3.  Run the ./configure script.
 
 4.  Once you've completed the "make && make install" dance, the
-    following applications will be installed, but WITHOUT ANY DATA.
+    following applications will be installed:
 
     * nsrlsvr, which serves hashes
     * nsrlupdate, which wipes the DB and loads a new RDS
+    
+    However, no hash list has been installed.  You must do this 
+    (as explained in the next step) before using nsrlsvr.
 
 5.  To create the data file, use nsrlupdate.  E.g., if your RDS is
     stored at /home/rjh/RDS_247m/NSRFile.txt:

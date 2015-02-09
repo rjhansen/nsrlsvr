@@ -1,4 +1,4 @@
-EXTRA_DIST = handler.hpp Doxyfile nsrlupdate.in nsrlappend.in
+EXTRA_DIST = handler.hpp Doxyfile nsrlupdate.in
 bin_PROGRAMS = nsrlsvr
 bin_SCRIPTS = nsrlupdate
 nsrlsvr_SOURCES = main.cc handler.cc to_pair64.cc

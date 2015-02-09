@@ -3,17 +3,21 @@ Installation instructions:
 0.  Please use official releases over the git master branch.  The
     git master branch isn't guaranteed to work properly.
 
-1.  Download the latest minimal RDS from http://www.nsrl.nist.gov.
+1.  nsrlsvr requires Python 2.7 or later and a C++ compiler that
+    can handle the latest C++14 spec.  Recent versions of Clang
+    and G++ work well.
+
+2.  Download the latest minimal RDS from http://www.nsrl.nist.gov.
     This file will likely be named "rds_XYZm.zip", where XYZ is the
     version number and the 'm' stands for 'minimal'.
 
-2.  Uncompress it and keep track of where your NSRLFile.txt is.
+3.  Uncompress it and keep track of where your NSRLFile.txt is.
     (Note: OS X lacks support for large ZIP files.  You may want to
     use p7zip instead on OS X.)
     
-3.  Run the ./configure script.
+4.  Run the ./configure script.
 
-4.  Once you've completed the "make && make install" dance, the
+5.  Once you've completed the "make && make install" dance, the
     following applications will be installed:
 
     * nsrlsvr, which serves hashes
@@ -22,16 +26,16 @@ Installation instructions:
     However, no hash list has been installed.  You must do this 
     (as explained in the next step) before using nsrlsvr.
 
-5.  To create the data file, use nsrlupdate.  E.g., if your RDS is
+6.  To create the data file, use nsrlupdate.  E.g., if your RDS is
     stored at /home/rjh/RDS_247m/NSRFile.txt:
 
     $ sudo nsrlupdate /home/rjh/RDS_247m/NSRLFile.txt
 
-6.  You can now start nsrlsvr!
+7.  You can now start nsrlsvr!
     
     $ nsrlsvr
 
-7.  If you want to add more hashes, make sure your list of hashes
+8.  If you want to add more hashes, make sure your list of hashes
 
     * contains one MD5 hash per line
     * is represented as 32 hexadecimal uppercase digits

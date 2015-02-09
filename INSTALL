@@ -15,7 +15,9 @@ Installation instructions:
     (Note: OS X lacks support for large ZIP files.  You may want to
     use p7zip instead on OS X.)
     
-4.  Run the ./configure script.
+4a. If you're running from git's master branch, run bootstrap.sh.
+
+4b. Run the ./configure script.
 
 5.  Once you've completed the "make && make install" dance, the
     following applications will be installed:

@@ -20,14 +20,17 @@ directory you'll find a file called "NSRLFile.txt"; make note of the path
 to it.  Then call nsrlupdate, passing the path to NSRLFile.txt as an 
 argument, and be prepared to wait for a while.
 
-nsrlupdate requires a lot of memory.  Try to avoid running it on systems
-with under 8Gb RAM, as painful swapping will almost certainly occur.
+nsrlupdate doesn't require much memory, but it may take a lot of time.
+As of RDS 2.47m, there are over 40 million hashes to extract.  The final
+hashes.txt file will be around 1.3Gb in size.  Expect this to only go up
+as subsequent RDSes are released.
 
 nsrlupdate will wipe out the current contents of the hash database, so
 be careful if you've appended your own custom dataset.
 
 .Sh BUGS
-None known.
+nsrlupdate is a Frankenstein's monster of Python 2 and Python 3 support.
+The good news is, it's a fairly small script.
 .Sh SEE ALSO
 nsrlsvr(1)
 .Sh AUTHOR

@@ -15,9 +15,9 @@ Installation instructions:
     (Note: OS X lacks support for large ZIP files.  You may want to
     use p7zip instead on OS X.)
     
-4a. If you're running from git's master branch, run bootstrap.sh.
-
-4b. Run the ./configure script.
+4.  Run bootstrap.sh followed by the configure script.  (Note: you
+    will need the GNU Autotools installed, specifically automake and
+    autoconf.)
 
 5.  Once you've completed the "make && make install" dance, the
     following applications will be installed:
@@ -29,9 +29,14 @@ Installation instructions:
     (as explained in the next step) before using nsrlsvr.
 
 6.  To create the data file, use nsrlupdate.  E.g., if your RDS is
-    stored at /home/rjh/RDS_247m/NSRFile.txt:
+    stored at /home/rjh/RDS_247m/NSRLFile.txt:
 
     $ sudo nsrlupdate /home/rjh/RDS_247m/NSRLFile.txt
+
+    Warning: *this might take a long time*.  As of RDS 2.47m, there
+    are over 40 million hashes there constituting a hashes.txt file 
+    of 1,333,423,179 bytes (!!).  That takes a few minutes to extract 
+    and write to disk.  You'll have time for a cup of coffee.
 
 7.  You can now start nsrlsvr!
     

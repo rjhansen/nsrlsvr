@@ -184,7 +184,7 @@ string generate_response(vector<string>::iterator begin,
                          vector<string>::iterator end)
 {
     string rv { "OK " };
-
+    
     for (auto i = begin ; i != end ; ++i)
     {
         bool present = binary_search(hashes.begin(),

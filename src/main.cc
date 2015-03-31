@@ -50,7 +50,7 @@ void load_hashes()
 
     try
     {
-        hash_set.reserve(40000000);
+        hash_set.reserve(45000000);
     }
     catch (std::bad_alloc& ba)
     {
@@ -69,7 +69,7 @@ void load_hashes()
     {
         string line;
         getline(infile, line);
-        transform(line.begin(), line.end(), line.begin(), ::toupper);
+        transform(line.begin(), line.end(), line.begin(), ::toupper);        
         if (0 == line.size()) continue;
 
         if (! regex_match(line.cbegin(), line.cend(), md5_re))
@@ -86,7 +86,7 @@ void load_hashes()
         
         try
         {
-            hash_set.push_back(to_pair64(line));
+            hash_set.emplace_back(to_pair64(line));
             hash_count += 1;
             if (0 == hash_count % 1000000)
             {
@@ -108,13 +108,14 @@ void load_hashes()
         "read in " + howmany + " unique hashes");
 
     infile.close();
-
+    
     sort(hash_set.begin(), hash_set.end());
+        
     if (hash_set.size() > 1)
     {
         log(LogLevel::INFO,
             "ensuring no duplicates");
-        pair64& foo { hash_set.at(0) };
+        pair64 foo { hash_set.at(0) };
         for (auto iter = (hash_set.cbegin() + 1) ;
                 iter != hash_set.cend();
                 ++iter)
@@ -294,7 +295,6 @@ int main(int argc, char* argv[])
     daemonize();
     load_hashes();
     signal(SIGCHLD, SIG_IGN);
-
     int32_t client_sock {0};
     int32_t svr_sock { make_socket() };
     sockaddr_in client;

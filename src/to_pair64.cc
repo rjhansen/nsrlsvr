@@ -9,6 +9,25 @@ using std::string;
 using std::transform;
 using std::make_pair;
 
+string from_pair64(pair64 input)
+{
+    static string hexadecimal { "0123456789ABCDEF" };
+    
+    string left = "", right = "";
+    uint64_t first = input.first;
+    uint64_t second = input.second;
+        
+    for (int i = 0 ; i < 16 ; ++i)
+    {
+        left = hexadecimal[first & 0x0F] + left;
+        right = hexadecimal[second & 0x0F] + right;
+        first >>= 4;
+        second >>= 4;
+    }
+    
+    return left + right;
+}
+
 pair64 to_pair64(string input)
 {
     ulong64 left { 0ULL };

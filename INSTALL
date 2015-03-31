@@ -12,8 +12,9 @@ Installation instructions:
     version number and the 'm' stands for 'minimal'.
 
 3.  Uncompress it and keep track of where your NSRLFile.txt is.
-    (Note: OS X lacks support for large ZIP files.  You may want to
-    use p7zip instead on OS X.)
+    (Note: As of Yosemite, OS X lacks support for large ZIP files.
+	This is beyond my control.  Ask Apple for technical support,
+	not me!)
     
 4.  Run bootstrap.sh followed by the configure script.  (Note: you
     will need the GNU Autotools installed, specifically automake and

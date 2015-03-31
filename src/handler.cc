@@ -1,65 +1,17 @@
-/* Copyright (c) 2011-2014, Robert J. Hansen <rjh@secret-alchemy.com>
- * and others.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * Code standards:
- *   This is a small enough project we don't need a formal coding standard.
- *   That said, here are some helpful tips for people who want to submit
- *   patches:
- *
- *   - If it's not 100% ISO C++11, it won't get in.
- *   - It must compile cleanly and without warnings under both GNU G++
- *     and Clang++, even with "-W -Wextra -ansi -pedantic".
- *     (Exceptions can be made for warnings that are actually compiler
- *     conformance issues: for instance, Clang++ will warn that 'long long'
- *     is a C++11 extension, even when you run it in -std=C++11 mode.)
- *   - C++ offers 'and', 'or' and 'not' keywords instead of &&, || and !.
- *     I like these: I think they're more readable.  Please use them.
- *   - C++ allows you to initialize variables at declaration time by
- *     doing something like "int x(3)" instead of "int x = 3".  Please
- *     do this where practical: it's a good habit to get into for C++.
- *   - Please try to follow the formatting conventions.  It's mostly
- *     straight-up astyle format, with occasional tweaks where necessary
- *     to get nice hardcopy printouts.
- *   - If you write a new function it must have a Doxygen block
- *     documenting it.
- *
- * Contributor history:
- *
- * Robert J. Hansen <rjh@secret-alchemy.com>
- *   - most everything
- * Jesse Kornblum <jessekornblum@gmail.com>
- *   - patch to log how many hashes are in each QUERY statement
- */
-
-#include "../config.h"
-#include <string>
+#include "main.h"
 #include <set>
 #include <vector>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <exception>
-#include "handler.hpp"
 #include <poll.h>
 #include <cstdlib> // for getloadavg
 #include <sys/types.h>
+#include <sys/time.h>
+#include <sys/socket.h>
 #include <syslog.h>
 #include <inttypes.h>
-#include <utility>
-
-#define INFO LOG_MAKEPRI(LOG_USER, LOG_INFO)
 
 /* Additional defines necessary on Linux: */
 #ifdef __linux__
@@ -74,215 +26,136 @@
 #include <unistd.h>
 #endif
 
-
-using std::set;
 using std::string;
 using std::find;
 using std::find_if;
 using std::transform;
 using std::vector;
-using std::not1;
-using std::equal_to;
-using std::ptr_fun;
 using std::remove;
-using std::shared_ptr;
 using std::exception;
 using std::binary_search;
 using std::pair;
-
-typedef unsigned long long ULONG64;
-typedef pair<ULONG64, ULONG64> pair64;
+using std::copy;
+using std::back_inserter;
 
 extern const vector<pair64>& hashes;
-extern const bool& enable_status;
 
 namespace
 {
+    
+vector<char> buffer;
 
-/** A convenience exception representing network errors that cannot
-  * be recovered from, and will result in a graceful bomb-out.
-  *
-  * @since 1.1
-  * @author Robert J. Hansen */
-class UnrecoverableNetworkError : public exception
+class NetworkTimeout : public std::exception
 {
 public:
-    const char* what() const throw()
-    {
-        return "unr net err";
+    virtual const char* what() const noexcept {
+        return "network timeout";
+    };
+};
+
+class NetworkError : public std::exception
+{
+public:
+    virtual const char* what() const noexcept {
+        return "network error";
     }
 };
 
-
-/** A functor that provides stateful reading of line-oriented data
-  * across UNIX file descriptors.
-  *
-  * The big problem with reading information over a socket
-  * connection is that data can arrive in a badly fragmented form.
-  * On a console you can just call getline() and be confident that
-  * when it returns there will be a CR/LF at the end and no data
-  * afterwards: that's the great virtue of accepting data one byte
-  * at a time on a tty.  On a network connection you have to take
-  * what the system gives you, and if the system gives you two
-  * strings spread over three packets with a CR/LF smack in the
-  * middle, well ... you have to make do.  That means returning the
-  * first line and storing the rest of the data for use in a
-  * subsequent call to the data reading facility.
-  *
-  * So, in other words, our get_line function needs to track state
-  * *and* be threadsafe/re-entrant.  Declaring a static buffer within
-  * the function would let it track state, but thread safety would be
-  * a problem.
-  *
-  * Fortunately, the C++ functor idiom solves this problem
-  * beautifully.
-  *
-  * Further: naïve blocking I/O, although it works rather well, will
-  * artificially inflate the server load.  For this reason the code
-  * uses slightly more complex but still quite manageable poll()-
-  * based I/O with a 750ms timeout.  Responsiveness isn't quite as
-  * high as it could be, but it's a small price to pay for better
-  * behavior server-side.
-  *
-  * @author Rob Hansen
-  * @since 0.9*/
-
-struct SocketIO
+string read_line(const int32_t sockfd, int timeout = 15)
 {
-public:
-    /** Initializes the object to listen on a particular file
-      * descriptor.
-      *
-      * @param fd File descriptor to read on */
-    SocketIO(int32_t fd) :
-        sock_fd { fd }, buffer {""}, tmp_buf(65536, '\0') {}
-	~SocketIO() { close(sock_fd); }
-
-    /** Writes a line of text to the socket.  The caller is
-      * responsible for ensuring the text has a '\r\n' appended.
-      *
-      * @param line The line to write
-      * @since 1.1 */
-    void write_line(const string& line) const
-    {
-        if (-1 == write(sock_fd, line.c_str(), line.size()))
-        {
-            throw UnrecoverableNetworkError();
-        }
+    struct pollfd pfd;
+    struct timeval start;
+    struct timeval now;
+    time_t elapsed_time;
+    ssize_t bytes_received;
+    char rdbuf[8192];
+    constexpr auto MEGABYTE = 1 << 20;
+    
+    if (buffer.capacity() < MEGABYTE)
+        buffer.reserve(MEGABYTE);
+    
+    // Step zero: check to see if there's already a string in the
+    // input queue awaiting a read.
+    auto iter = find(buffer.begin(), buffer.end(), '\n');
+    if (iter != buffer.end()) {
+        vector<char> newbuf(buffer.begin(), iter);
+        buffer.erase(buffer.begin(), iter + 1);
+        newbuf.erase(remove(newbuf.begin(), newbuf.end(), '\r'),
+                     newbuf.end());
+        return string(newbuf.begin(), newbuf.end());
     }
+    
+    // Per POSIX, this can only err if we access invalid memory.
+    // Since start is always valid, there's no problem here and
+    // no need to check gettimeofday's return code.
+    gettimeofday(&start, nullptr);
+    now.tv_sec = start.tv_sec;
+    now.tv_usec = start.tv_usec;
+    elapsed_time = now.tv_sec - start.tv_sec;
 
-    /** Writes a line of text to the socket.  The caller is
-      * responsible for ensuring the text has a '\r\n' appended.
-      *
-      * @param line The line to write
-      * @since 1.1 */
-    void write_line(const char* line) const
-    {
-		string foo(line);
-        write_line(foo);
-    }
+    while ((elapsed_time < timeout)) {
+        pfd.fd = sockfd;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        memset(rdbuf, 8192, 0);
 
-    /** Reads a line from the socket.  
-	  * 
-      * This function replaces the old operator().
-      *
-      * @since 1.1
-      * @return A string representing one line read from
-      * the file descriptor.*/
-    string read_line()
-    {
-        /* "But in Latin, Jehovah begins with the letter 'I'..."
-         *
-         * SAVE YOURSELF THE NIGHTMARE BUG HUNT.  Remember that when
-         * you test this code at the console, tapping return will
-         * enter a \n.  When you do it from a Telnet client, it enters
-         * a \r\n.  This one-character difference turned into a six-
-         * hour bug hunt.  Documented here for posterity.  If you ever
-         * wonder why I'm tempted to start drinking before the sun
-         * rises, well, this one's a good example... */
-
-        while (true)
+        if ((buffer.size() > 65535) ||
+                (-1 == poll(&pfd, 1, 1000)) ||
+                (pfd.revents & POLLERR) ||
+                (pfd.revents & POLLHUP) ||
+                (pfd.revents & POLLNVAL)) 
         {
-            pollfd fds = { sock_fd, POLLIN, 0 };
-            int poll_code(poll(&fds, 1, 750));
-
-            if (-1 == poll_code)
-                throw UnrecoverableNetworkError();
-
-            else if (fds.revents & POLLERR ||
-                     fds.revents & POLLHUP)
-                throw UnrecoverableNetworkError();
-
-            else if (fds.revents & POLLIN)
-            {
-                memset(static_cast<void*>(&tmp_buf[0]),
-                       0,
-                       tmp_buf.size());
-                ssize_t bytes_read = read(sock_fd,
-                                          static_cast<void*>(&tmp_buf[0]),
-                                          tmp_buf.size());
-                buffer += string(&tmp_buf[0], &tmp_buf[bytes_read]);
-
-                /* To prevent DoS from clients spamming us with huge
-                   packets, bomb on any query larger than 256k. */
-                if (buffer.size() > 262144)
-                    throw UnrecoverableNetworkError();
-
-                string::iterator iter = find(buffer.begin(),
-                                             buffer.end(), '\n');
-                if (iter != buffer.end())
-                {
-                    string rv(buffer.begin(), iter);
-                    rv.erase(remove(rv.begin(),
-                                     rv.end(),
-                                     '\r'),
-                              rv.end());
-                    rv.erase(remove(rv.begin(),
-                                     rv.end(),
-                                     '\n'),
-                              rv.end());
-                    buffer = string(iter + 1, buffer.end());
-                    return rv;
-                }
+            log(LogLevel::ALERT, "network error: ");
+            if (buffer.size() > 65535) {
+                log(LogLevel::ALERT, "buffer too large");
             }
+            if (pfd.revents & POLLERR) {
+                log(LogLevel::ALERT, "POLLERR");
+            }
+            if (pfd.revents & POLLHUP) {
+                log(LogLevel::ALERT, "POLLHUP");
+            }
+            if (pfd.revents & POLLNVAL) {
+                log(LogLevel::ALERT, "POLLNVAL");
+            }
+            throw NetworkError();
         }
-    }
-private:
-    /** Tracks the file descriptor to read */
-    const int32_t sock_fd;
-    /** Internal storage buffer for keeping track of read, but not
-      * yet finished, data */
-    string buffer;
-    /** Internal storage buffer used only briefly, but declared here
-      * in order so that we can avoid repeatedly putting it on the
-      * stack.  Additionally, this only takes a few bytes on the stack:
-      * the actual buffer gets allocated on the heap. */
-    vector<char> tmp_buf;
-};
+        if (pfd.revents & POLLIN) {
+            bytes_received = recvfrom(sockfd, rdbuf, 8192, 0, NULL, 0);
+            copy(rdbuf, rdbuf + bytes_received, back_inserter(buffer));
+            string s(rdbuf, rdbuf + bytes_received);
+        }
 
-/** A hand-rolled string tokenizer in C++.
-  *
-  * Efficient string tokenization in 29 lines, without absurd
-  * contortions of code.  Booyah.  Given the state of things in C,
-  * where on some platforms strtok is outright obsoleted by strsep
-  * and on other platforms strsep is just a distant promise of what
-  * the future might hold... I'll take this way.
-  *
-  * Returns a smartpointer to a vector for the same reason
-  * SocketIO::read_line() returns one: to spare us the
-  * otherwise absurd amount of memcpying that would be going on.
-  *
-  * @param line A pointer to the line to tokenize
-  * @param character The delimiter character
-  * @returns An shared_ptr to a vector of strings representing tokens */
-auto tokenize(string& line, char character = ' ')
+        iter = find(buffer.begin(), buffer.end(), '\n');
+        if (iter != buffer.end()) {
+            vector<char> newbuf(buffer.begin(), iter);
+            buffer.erase(buffer.begin(), iter + 1);
+            newbuf.erase(remove(newbuf.begin(), newbuf.end(), '\r'),
+                         newbuf.end());
+            return string(newbuf.begin(), newbuf.end());
+        }
+        gettimeofday(&now, nullptr);
+        elapsed_time = now.tv_sec - start.tv_sec;
+    }
+    throw NetworkTimeout();    
+}
+
+void write_line(const int32_t sockfd, string&& line)
+{
+    string output = line + "\r\n";
+    const char* msg = output.c_str();
+    if (-1 == send(sockfd, (void*) msg, strlen(msg), 0))
+        throw NetworkError();
+}
+
+auto tokenize(string&& line, char character = ' ')
 {
     vector<string> rv;
     transform(line.begin(), line.end(), line.begin(), toupper);
 
-    auto begin(find_if(line.cbegin(), line.cend(),
-                                   not1(bind2nd(equal_to<char>(),
-                                           character))));
+    auto begin(find_if(line.cbegin(),
+                        line.cend(),
+                        [&](auto x) { return x != character; }));
     auto end(
         (begin != line.cend())
         ? find(begin + 1, line.cend(), character)
@@ -297,8 +170,9 @@ auto tokenize(string& line, char character = ' ')
             begin = line.cend();
             continue;
         }
-        begin = find_if(end + 1, line.cend(),
-                        not1(bind2nd(equal_to<char>(), character)));
+        begin = find_if(end + 1, 
+                        line.cend(),
+                        [&](auto x) { return x != character; });
         end = (begin != line.cend())
               ? find(begin + 1, line.cend(), character)
               : line.cend();
@@ -306,252 +180,87 @@ auto tokenize(string& line, char character = ' ')
     return rv;
 }
 
-/** Turns a string of 'a.b.c.d', ala dotted-quad style, into a
-  * 32-bit integer.  'a' must be present: if b through d are
-  * omitted, they are assumed to be zero.
-  *
-  * @param line A smartpointer to a version string
-  * @returns A 32-bit integer representing a version, or -1 on
-  * failure.
-  * @author Rob Hansen
-  * @since 0.9 */
-auto parse_version(string line)
+string generate_response(vector<string>::iterator begin,
+                         vector<string>::iterator end)
 {
-    int32_t version { 0 };
-    int32_t this_token { 0 };
-    auto tokens = tokenize(line);
-    size_t index { 0 };
+    string rv { "OK " };
 
-    if (tokens.size() != 2 or
-            tokens.at(0) != "VERSION:")
+    for (auto i = begin ; i != end ; ++i)
     {
-		return -1;
-    }
+        bool present = binary_search(hashes.begin(),
+                                     hashes.end(), 
+                                     to_pair64(*i));
 
-    auto version_tokens = tokenize(tokens.at(1), '.');
-
-    if (version_tokens.size() < 1 or version_tokens.size() > 4)
-    {
-		return -1;
+        rv += present ? "1" : "0";
     }
-
-    while (version_tokens.size() != 4)
-    {
-        version_tokens.push_back("0");
-    }
-
-    for (index = 0 ; index < 4 ; ++index)
-    {
-        string& thing(version_tokens.at(index));
-        if (thing.end() != find_if(thing.begin(),
-                                   thing.end(),
-                                   not1(ptr_fun(::isdigit))))
-        {
-			return -1;
-        }
-        this_token = atoi(thing.c_str());
-        if (this_token < 0 or this_token > 254)
-        {
-			return -1;
-        }
-        version = (version << 8) + this_token;
-    }
-	return version;
+    return rv;
+}
 }
 
-
-/** A simple convenience function that allows us to ensure
-  * we're getting valid hashes.
-  *
-  * @param digest The string being checked
-  * @returns true if it could be an MD5 or SHA-1 digest, false otherwise
-  * @since 0.9
-  * @author Rob Hansen */
-auto ishexdigest(const string& digest)
+void handle_client(const int32_t fd)
 {
-    if (digest.size() != 32)
-    {
-        return false;
-    }
-    for (auto iter = digest.cbegin() ; iter != digest.cend() ; ++iter)
-    {
-        bool is_number = (*iter >= '0' and *iter <= '9');
-        bool is_letter = (*iter >= 'A' and *iter <= 'F');
-        if (not (is_number or is_letter))
-            return false;
-    }
-    return true;
-}
-
-/** Performs a transaction with a client.  Adheres to protocol
-  * version 2.0.
-  *
-  * @param sio The socket to listen and respond on
-  * @since 1.1 */
-void handle_protocol_20(SocketIO& sio, const char* ip_addr)
-{
-    uint32_t total_queries(0);
-    uint32_t found(0);
-    double frac(0.0);
+    enum class Command {
+        Version = 0,
+        Bye = 1,
+        Status = 2,
+        Query = 3,
+        Upshift = 4,
+        Downshift = 5,
+        Unknown = 6
+    };
 
     try
     {
-		string line = sio.read_line();
-        vector<string> commands = tokenize(line);
-        while (commands.size() >= 1)
-        {
-            string return_seq("");
+        vector<string> commands = tokenize(read_line(fd));
+        while (true) {
+            string cmdstring = commands.at(0);
+            Command cmd = Command::Unknown;
+            
+            if (cmdstring == "VERSION:") cmd = Command::Version;
+            else if (cmdstring == "BYE") cmd = Command::Bye;
+            else if (cmdstring == "STATUS") cmd = Command::Status;
+            else if (cmdstring == "QUERY") cmd = Command::Query;
+            else if (cmdstring == "UPSHIFT") cmd = Command::Upshift;
+            else if (cmdstring == "DOWNSHIFT") cmd = Command::Downshift;
 
-            if ("BYE" == commands.at(0))
+            switch (cmd)
             {
-                if (total_queries)
-                {
-                    double numerator(100 * found);
-                    double denominator(total_queries);
-                    frac = numerator / denominator;
-                }
-                syslog(INFO,
-                       "%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed normally",
-                       ip_addr,
-                       found,
-                       total_queries,
-                       frac);
+            case Command::Version:
+                write_line(fd, "OK");
+                break;
+
+            case Command::Bye:
+                close(fd);
                 return;
-            }
+                break;
 
-            else if ("DOWNSHIFT" == commands.at(0))
-            {
-                syslog(INFO,
-                       "%s asked for a protocol downgrade to 1.0",
-                       ip_addr);
-                sio.write_line("NOT OK\r\n");
+            case Command::Status:
+                write_line(fd, "OK NOT SUPPORTED");
+                break;
+
+            case Command::Query:
+                write_line(fd, generate_response(commands.begin() + 1, commands.end()));
+                break;
+
+            case Command::Upshift:
+                write_line(fd, "NOT OK");
+                break;
+
+            case Command::Downshift:
+                write_line(fd, "NOT OK");
+                break;
+
+            default:
+                write_line(fd, "NOT OK");
+                close(fd);
                 return;
+                break;
             }
-
-            else if ("UPSHIFT" == commands.at(0))
-            {
-                syslog(INFO,
-                       "%s asked for a protocol upgrade (refused)",
-                       ip_addr);
-                sio.write_line("NOT OK\r\n");
-            }
-
-            else if ("QUERY" == commands.at(0))
-            {
-                if (commands.size() == 1)
-                {
-                    sio.write_line("NOT OK\r\n");
-                    return;
-                }
-                else
-                {
-                    size_t index(1);
-                    for ( ; index < commands.size() ; ++index)
-                    {
-                        if (not ishexdigest(commands.at(index)))
-                        {
-                            sio.write_line("NOT OK\r\n");
-                            return;
-                        }
-                        if (binary_search(hashes.begin(), hashes.end(),
-                                          to_pair64(commands.at(index))))
-                        {
-                            return_seq += "1";
-                            found += 1;
-                        }
-                        else
-                        {
-                            return_seq += "0";
-                        }
-                    }
-                    return_seq = "OK " + return_seq + "\r\n";
-                    total_queries += commands.size() - 1;
-                }
-            }
-
-            else if ("STATUS" == commands.at(0) and enable_status)
-            {
-                double loadavg[3] = { 0.0, 0.0, 0.0 };
-                char buf[1024];
-
-                getloadavg(loadavg, 3);
-                memset(buf, 0, 1024);
-                snprintf(buf,
-                         1024,
-                         "OK %u %s hashes, load %.2f %.2f %.2f\r\n",
-                         (u_int32_t) hashes.size(),
-                         "MD5",
-                         loadavg[0],
-                         loadavg[1],
-                         loadavg[2]);
-                string line(buf);
-                return_seq = string(buf);
-                syslog(INFO,
-                       "%s asked for server status (sent '%s')",
-                       ip_addr,
-                       buf);
-                sio.write_line(return_seq);
-                return;
-            }
-            else if ("STATUS" == commands.at(0))
-            {
-                syslog(INFO,
-                       "%s asked for server status (refused)",
-                       ip_addr);
-                return_seq = "OK NOT SUPPORTED\r\n";
-                sio.write_line(return_seq);
-                return;
-            }
-            else
-            {
-                sio.write_line("NOT OK\r\n");
-                return;
-            }
-            sio.write_line(return_seq);
-			line = sio.read_line();
-            commands = tokenize(line);
+            commands = tokenize(read_line(fd));
         }
     }
-    catch (exception&)
+    catch (std::exception& e)
     {
-        if (total_queries)
-        {
-            double numerator(100 * found);
-            double denominator(total_queries);
-            frac = numerator / denominator;
-        }
-        syslog(INFO,
-               "%s: protocol 2.0, found %u of %u hashes (%.1f%%), closed abnormally",
-               ip_addr,
-               found,
-               total_queries,
-               frac);
     }
 }
-}
 
-/** Handles client query requests.
-  *
-  * @param fd the client's socket file descriptor
-  * @since 0.9 */
-void handle_client(const int32_t fd, const string ip_addr)
-{
-    try
-    {
-		SocketIO sio { fd };
-        int32_t version { parse_version(sio.read_line()) };
-        if (version == 0x02000000)
-        {
-            sio.write_line("OK\r\n");
-            handle_protocol_20(sio, ip_addr.c_str());
-        }
-        else
-        {
-            sio.write_line("NOT OK\r\n");
-        }
-    }
-    catch (exception&)
-    {
-		// pass; just go through, close the socket, and quit
-    }
-}

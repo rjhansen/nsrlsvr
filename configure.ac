@@ -1,4 +1,4 @@
-AC_INIT([NSRL Server], [1.6-pre], [Robert J. Hansen <rjh@secret-alchemy.com>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
+AC_INIT([NSRL Server], [1.6], [Robert J. Hansen <rjh@sixdemonbag.org>], [nsrlsvr], [http://rjhansen.github.com/nsrlsvr/])
 AC_ARG_WITH([warning],
     [AS_HELP_STRING([--warning],
         [display a compilation hint @<:@default: yes@:>@])],

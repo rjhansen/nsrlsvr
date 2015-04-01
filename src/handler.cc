@@ -1,22 +1,33 @@
+/*
+Copyright (c) 2015, Robert J. Hansen <rjh@sixdemonbag.org>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
 #include "main.h"
-#include <set>
 #include <vector>
 #include <algorithm>
-#include <functional>
-#include <memory>
 #include <exception>
 #include <poll.h>
-#include <cstdlib> // for getloadavg
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <syslog.h>
 #include <inttypes.h>
+#include <array>
 
 /* Additional defines necessary on Linux: */
 #ifdef __linux__
-#include <cstring> // for memset
-#include <cstdio> // for snprintf
 #include <unistd.h> // because Fedora has lately taken to being weird
 #endif
 
@@ -37,14 +48,14 @@ using std::binary_search;
 using std::pair;
 using std::copy;
 using std::back_inserter;
+using std::array;
+using std::fill;
 
+// defined in main.cc
 extern const vector<pair64>& hashes;
 
 namespace
 {
-    
-vector<char> buffer;
-
 class NetworkTimeout : public std::exception
 {
 public:
@@ -63,12 +74,13 @@ public:
 
 string read_line(const int32_t sockfd, int timeout = 15)
 {
+    static vector<char> buffer;
+    static array<char, 8192> rdbuf;
     struct pollfd pfd;
     struct timeval start;
     struct timeval now;
     time_t elapsed_time;
     ssize_t bytes_received;
-    char rdbuf[8192];
     constexpr auto MEGABYTE = 1 << 20;
     
     if (buffer.capacity() < MEGABYTE)
@@ -97,7 +109,7 @@ string read_line(const int32_t sockfd, int timeout = 15)
         pfd.fd = sockfd;
         pfd.events = POLLIN;
         pfd.revents = 0;
-        memset(rdbuf, 8192, 0);
+        fill(rdbuf.begin(), rdbuf.end(), 0);
 
         if ((buffer.size() > 65535) ||
                 (-1 == poll(&pfd, 1, 1000)) ||
@@ -121,9 +133,11 @@ string read_line(const int32_t sockfd, int timeout = 15)
             throw NetworkError();
         }
         if (pfd.revents & POLLIN) {
-            bytes_received = recvfrom(sockfd, rdbuf, 8192, 0, NULL, 0);
-            copy(rdbuf, rdbuf + bytes_received, back_inserter(buffer));
-            string s(rdbuf, rdbuf + bytes_received);
+            bytes_received = recvfrom(sockfd, &rdbuf[0], rdbuf.size(), 0, NULL, 0);
+            copy(rdbuf.begin(), 
+                 rdbuf.begin() + bytes_received, 
+                 back_inserter(buffer));
+            string s {rdbuf.begin(), rdbuf.begin() + bytes_received};
         }
 
         iter = find(buffer.begin(), buffer.end(), '\n');
@@ -144,7 +158,7 @@ void write_line(const int32_t sockfd, string&& line)
 {
     string output = line + "\r\n";
     const char* msg = output.c_str();
-    if (-1 == send(sockfd, (void*) msg, strlen(msg), 0))
+    if (-1 == send(sockfd, (void*) msg, output.size(), 0))
         throw NetworkError();
 }
 
@@ -153,22 +167,19 @@ auto tokenize(string&& line, char character = ' ')
     vector<string> rv;
     transform(line.begin(), line.end(), line.begin(), toupper);
 
-    auto begin(find_if(line.cbegin(),
-                        line.cend(),
-                        [&](auto x) { return x != character; }));
-    auto end(
-        (begin != line.cend())
-        ? find(begin + 1, line.cend(), character)
-        : line.cend()
-    );
+    auto begin = find_if(line.cbegin(),
+                         line.cend(),
+                         [&](auto x) { return x != character; });
+    auto end = (begin != line.cend()) ? 
+                 find(begin + 1, line.cend(), character) : 
+                 line.cend();
 
     while (begin != line.cend())
     {
-        rv.push_back(string(begin, end));
+        rv.emplace_back(string {begin, end});
         if (end == line.cend())
         {
-            begin = line.cend();
-            continue;
+            break;
         }
         begin = find_if(end + 1, 
                         line.cend(),
@@ -180,10 +191,9 @@ auto tokenize(string&& line, char character = ' ')
     return rv;
 }
 
-string generate_response(vector<string>::iterator begin,
-                         vector<string>::iterator end)
+string generate_response(auto begin, auto end)
 {
-    string rv { "OK " };
+    string rv = "OK ";
     
     for (auto i = begin ; i != end ; ++i)
     {
@@ -211,9 +221,9 @@ void handle_client(const int32_t fd)
 
     try
     {
-        vector<string> commands = tokenize(read_line(fd));
+        auto commands = tokenize(read_line(fd));
         while (true) {
-            string cmdstring = commands.at(0);
+            auto cmdstring = commands.at(0);
             Command cmd = Command::Unknown;
             
             if (cmdstring == "VERSION:") cmd = Command::Version;

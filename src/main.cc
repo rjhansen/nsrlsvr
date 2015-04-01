@@ -1,3 +1,19 @@
+/*
+Copyright (c) 2015, Robert J. Hansen <rjh@sixdemonbag.org>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
 #include "main.h"
 #include <sys/stat.h>
 #include <time.h>
@@ -7,12 +23,12 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <memory>
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
 #include <signal.h>
 #include <regex>
+#include <exception>
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -25,7 +41,6 @@ using std::ifstream;
 using std::cerr;
 using std::cout;
 using std::vector;
-using std::remove_if;
 using std::sort;
 using std::pair;
 using std::regex;
@@ -39,15 +54,31 @@ vector<pair64> hash_set;
 string hashes_location { PKGDATADIR "/hashes.txt" };
 uint16_t port { 9120 };
 
+/** Attempts to load a set of MD5 hashes from disk.
+  * Each line must be either blank or 32 hexadecimal digits.  If the
+  * file doesn't conform to this, nsrlsvr will abort and display an
+  * error message to the log.
+  */
 void load_hashes()
 {
     const regex md5_re {
         "^[A-Fa-f0-9]{32}$"
     };
     vector<char> buf(1024, 0);
-    uint32_t hash_count { 0 };
-    ifstream infile { hashes_location.c_str() };
+    uint32_t hash_count {0};
+    ifstream infile {hashes_location.c_str()};
 
+    // As of this writing, the RDS had about 40 million entries.
+    // When a vector needs to grow, it normally does so by doubling
+    // the former allocation -- so after this, the next stop is a
+    // 90 million allocation (@ 16 bytes per, or 1.4 GiB).  If you're
+    // maintaining this code, try to keep the reserve a few million
+    // larger than the RDS currently is, to give yourself room to
+    // grow without a vector realloc.
+    //
+    // Failure to reserve this block of memory is non-recoverable.
+    // Don't even try.  Just log the error and bail out.  Let the end
+    // user worry about installing more RAM.
     try
     {
         hash_set.reserve(45000000);
@@ -69,7 +100,7 @@ void load_hashes()
     {
         string line;
         getline(infile, line);
-        transform(line.begin(), line.end(), line.begin(), ::toupper);        
+        transform(line.begin(), line.end(), line.begin(), ::toupper);
         if (0 == line.size()) continue;
 
         if (! regex_match(line.cbegin(), line.cend(), md5_re))
@@ -83,14 +114,28 @@ void load_hashes()
             exit(EXIT_FAILURE);
             return;
         }
-        
+
         try
         {
+            // .emplace_back is the C++11 improvement over the old
+            // vector.push_back.  It has the benefit of not needing
+            // to construct a temporary to hold the value; it can
+            // just construct-in-place.  For 40 million values, that
+            // can be significant.
+            //
+            // Note that if the vector runs out of reserved room it
+            // will attempt to make a new allocation double the size
+            // of the last.  That means the application will at least
+            // briefly need *three times* the expected RAM -- one for
+            // the data set and two for the newly-allocated chunk.
+            // Given we're talking about multiple gigs of RAM, this
+            // .emplace_back needs to consider the possibility of a
+            // RAM allocation failure.
             hash_set.emplace_back(to_pair64(line));
             hash_count += 1;
             if (0 == hash_count % 1000000)
             {
-                string howmany { to_string(hash_count / 1000000) };
+                string howmany {to_string(hash_count / 1000000)};
                 log(LogLevel::ALERT,
                     "loaded " + howmany + " million hashes");
             }
@@ -103,19 +148,19 @@ void load_hashes()
             return;
         }
     }
-    string howmany { to_string(hash_count) };
+    string howmany {to_string(hash_count)};
     log(LogLevel::INFO,
-        "read in " + howmany + " unique hashes");
+        "read in " + howmany + " hashes");
 
     infile.close();
-    
+
     sort(hash_set.begin(), hash_set.end());
-        
+
     if (hash_set.size() > 1)
     {
         log(LogLevel::INFO,
             "ensuring no duplicates");
-        pair64 foo { hash_set.at(0) };
+        pair64 foo {hash_set.at(0)};
         for (auto iter = (hash_set.cbegin() + 1) ;
                 iter != hash_set.cend();
                 ++iter)
@@ -134,15 +179,19 @@ void load_hashes()
 }
 
 
+/** Converts this process into a well-behaved UNIX daemon.*/
 void daemonize()
 {
+    /* Nothing in here should be surprising.  If it is, then please
+       check the standard literature to ensure you understand how a
+       daemon is supposed to work. */
     const auto pid = fork();
-    if (pid < 0)
+    if (0 > pid)
     {
         log(LogLevel::WARN, "couldn't fork!");
         exit(EXIT_FAILURE);
     }
-    else if (pid > 0)
+    else if (0 < pid)
     {
         exit(EXIT_SUCCESS);
     }
@@ -150,7 +199,7 @@ void daemonize()
 
     umask(0);
 
-    if (setsid() < 0)
+    if (0 > setsid())
     {
         log(LogLevel::WARN, "couldn't set sid");
         exit(EXIT_FAILURE);
@@ -164,12 +213,14 @@ void daemonize()
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
-
 }
 
-
+/** Creates a server socket to listen for client connections. */
 auto make_socket()
 {
+    /* If anything in here is surprising, please check the standard
+       literature to make sure you understand TCP/IP. */
+
     sockaddr_in server;
     memset(static_cast<void*>(&server), 0, sizeof(server));
     server.sin_family = AF_INET;
@@ -185,7 +236,7 @@ auto make_socket()
     if (0 > bind(sock, reinterpret_cast<sockaddr*>(&server),
                  sizeof(server)))
     {
-        log(LogLevel::WARN, "couldn't bind to port 9120");
+        log(LogLevel::WARN, "couldn't bind to port");
         exit(EXIT_FAILURE);
     }
     if (0 > listen(sock, 20))
@@ -198,27 +249,28 @@ auto make_socket()
     return sock;
 }
 
+/** Display a helpful usage message. */
 void show_usage(string program_name)
 {
     cout <<
-         "Usage: "
-         << program_name
-         << " [-vbhs -f FILE -p PORT]\n\n"
-         "-v : print version information\n"
-         "-b : get information on reporting bugs\n"
-         "-f : specify an alternate hash set (default: "
-         << PKGDATADIR <<
-         "/hashes.txt)\n"
-         "-h : show this help message\n"
-         "-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
+"Usage: " << program_name << " [-vbh -f FILE -p PORT]\n\n"
+"-v : print version information\n"
+"-b : get information on reporting bugs\n"
+"-f : specify an alternate hash set (default: \n     "    
+      << PKGDATADIR << "/hashes.txt)\n"
+"-h : show this help message\n"
+"-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
 }
 
-
+/** Parse command-line options.
+    @param argc argc from main()
+    @param argv argv from main()
+*/
 void parse_options(int argc, char* argv[])
 {
-    int32_t opt { 0 };
+    int32_t opt {0};
 
-    while (-1 != (opt = getopt(argc, argv, "bsvof:hp:t:S")))
+    while (-1 != (opt = getopt(argc, argv, "vbhf:p:")))
     {
         switch (opt)
         {
@@ -229,7 +281,7 @@ void parse_options(int argc, char* argv[])
                  << "\n\n";
             exit(EXIT_SUCCESS);
             break;
-            
+
         case 'b':
             cout << argv[0]
                  << " "
@@ -237,13 +289,13 @@ void parse_options(int argc, char* argv[])
                  << "\n"
                  << PACKAGE_URL
                  << "\n"
-                 "Praise, blame and bug reports to " << PACKAGE_BUGREPORT << ".\n\n"
-                 "Please be sure to include your operating system, version of your\n"
-                 "operating system, and a detailed description of how to recreate\n"
-                 "your bug.\n\n";
+"Praise, blame and bug reports to " << PACKAGE_BUGREPORT << ".\n\n"
+"Please be sure to include your operating system, version of your\n"
+"operating system, and a detailed description of how to recreate\n"
+"your bug.\n\n";
             exit(EXIT_SUCCESS);
             break;
-            
+
         case 'f':
         {
             hashes_location = string((const char*) optarg);
@@ -251,7 +303,7 @@ void parse_options(int argc, char* argv[])
             if (not infile)
             {
                 cerr <<
-                     "Error: the specified dataset file could not be found.\n\n";
+"Error: the specified dataset file could not be found.\n\n";
                 exit(EXIT_FAILURE);
             }
             break;
@@ -260,11 +312,13 @@ void parse_options(int argc, char* argv[])
             show_usage(argv[0]);
             exit(EXIT_SUCCESS);
             break;
-            
+
         case 'p':
             try
             {
                 auto port_num = stoi(optarg);
+                if (port < 1024 || port > 65535)
+                    throw new std::exception();
             }
             catch (...)
             {
@@ -282,42 +336,63 @@ void parse_options(int argc, char* argv[])
 
 }
 
+/** The set of all loaded hashes, represented as a const reference. */
 const vector<pair64>& hashes { hash_set };
 
+/** Writes to syslog with the given priority level.
+
+    @param level The priority of the message
+    @param msg The message to write
+*/
 void log(const LogLevel level, const string msg)
 {
     syslog(LOG_MAKEPRI(LOG_USER, static_cast<int>(level)), msg.c_str());
 }
 
+/** Entry point for the application.
+
+    @param argc The number of command-line arguments
+    @param argv Command-line arguments
+*/
 int main(int argc, char* argv[])
 {
     parse_options(argc, argv);
     daemonize();
     load_hashes();
+    // The following line helps avoid zombie processes.  Normally parents
+    // need to reap their children in order to prevent zombie processes;
+    // if SIGCHLD is set to SIG_IGN, though, the processes can terminate
+    // normally.
     signal(SIGCHLD, SIG_IGN);
     int32_t client_sock {0};
-    int32_t svr_sock { make_socket() };
+    int32_t svr_sock {make_socket()};
     sockaddr_in client;
+    sockaddr* client_addr = reinterpret_cast<sockaddr*>(&client);
     socklen_t client_length { sizeof(client) };
 
-SERVER_LOOP:
-    if (0 > (client_sock = accept(svr_sock,
-                                  reinterpret_cast<sockaddr*>(&client),
-                                  &client_length)))
+    while (true)
     {
-        log(LogLevel::WARN, "dropped a connection");
-        goto SERVER_LOOP;
-    }
-    string ipaddr { inet_ntoa(client.sin_addr) };
-    log(LogLevel::ALERT, string("accepted a client: ") + ipaddr);
-        
-    if (0 == fork()) {
-        log(LogLevel::ALERT, "calling handle_client");
-        handle_client(client_sock);
-        return 0;
-    }
-    goto SERVER_LOOP;
+        if (0 > (client_sock = accept(svr_sock,
+                                      client_addr,
+                                      &client_length)))
+        {
+            log(LogLevel::WARN, "dropped a connection");
+            continue;
+        }
 
+        string ipaddr {inet_ntoa(client.sin_addr)};
+        log(LogLevel::ALERT, string("accepted a client: ") + ipaddr);
+
+        if (0 == fork())
+        {
+            log(LogLevel::ALERT, "calling handle_client");
+            handle_client(client_sock);
+            return 0;
+        }
+    }
+
+    // Note that as is normal for daemons, the exit point is never
+    // reached.  This application does not normally terminate.
     return EXIT_SUCCESS;
 }
 

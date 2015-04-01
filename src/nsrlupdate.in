@@ -32,8 +32,8 @@ def process_rds(filename):
                     if len(cols) > 2:
                         match = md5re.match(cols[1])
                         if match:
-                            md5 = match.group(1) + "\n"
-                            out.write(md5.encode("ASCII"))
+                            md5 = match.group(1) + "\n"                            
+                            out.write(md5)
                     line = unicodify(fh.readline())
         
     except IOError as e:

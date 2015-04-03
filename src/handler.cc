@@ -111,7 +111,7 @@ string read_line(const int32_t sockfd, int timeout = 15)
         pfd.revents = 0;
         fill(rdbuf.begin(), rdbuf.end(), 0);
 
-        if ((buffer.size() > 65535) ||
+        if ((buffer.size() > 262144) ||
                 (-1 == poll(&pfd, 1, 1000)) ||
                 (pfd.revents & POLLERR) ||
                 (pfd.revents & POLLHUP) ||
@@ -245,7 +245,7 @@ void handle_client(const int32_t fd)
                 break;
 
             case Command::Status:
-                write_line(fd, "OK NOT SUPPORTED");
+                write_line(fd, "NOT SUPPORTED");
                 break;
 
             case Command::Query:

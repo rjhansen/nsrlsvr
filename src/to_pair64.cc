@@ -48,11 +48,11 @@ pair64 to_pair64(string input)
 {
     ulong64 left { 0ULL };
     ulong64 right { 0ULL };
-    int index {0};
+    uint8_t val1 { 0ULL };
+    uint8_t val2 { 0ULL };
+    size_t index {0};
     char ch1 { 0 };
     char ch2 { 0 };
-    int val1 { 0 };
-    int val2 { 0 };
 
     transform(input.begin(),
               input.end(),
@@ -65,11 +65,11 @@ pair64 to_pair64(string input)
         ch2 = input[index + 16];
 
         val1 = (ch1 >= '0' and ch1 <= '9') ?
-               ch1 - '0' :
-               ch1 - 'a' + 10;
+               static_cast<uint8_t>(ch1 - '0') :
+               static_cast<uint8_t>(ch1 - 'a') + 10;
         val2 = (ch2 >= '0' and ch2 <= '9') ?
-               ch2 - '0' :
-               ch2 - 'a' + 10;
+               static_cast<uint8_t>(ch2 - '0') :
+               static_cast<uint8_t>(ch2 - 'a') + 10;
 
         left = (left << 4) + val1;
         right = (right << 4) + val2;

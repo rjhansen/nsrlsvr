@@ -83,7 +83,7 @@ void load_hashes()
     {
         hash_set.reserve(45000000);
     }
-    catch (std::bad_alloc& ba)
+    catch (std::bad_alloc&)
     {
         log(LogLevel::ALERT, "couldn't reserve enough memory");
         exit(EXIT_FAILURE);
@@ -112,7 +112,6 @@ void load_hashes()
             log(LogLevel::ALERT,
                 "shutting down!");
             exit(EXIT_FAILURE);
-            return;
         }
 
         try
@@ -140,12 +139,11 @@ void load_hashes()
                     "loaded " + howmany + " million hashes");
             }
         }
-        catch (std::bad_alloc& ba)
+        catch (std::bad_alloc&)
         {
             log(LogLevel::ALERT,
                 "couldn't allocate enough memory");
             exit(EXIT_FAILURE);
-            return;
         }
     }
     string howmany {to_string(hash_count)};
@@ -171,7 +169,6 @@ void load_hashes()
                     "hash file contains duplicates -- "
                     "shutting down!");
                 exit(EXIT_FAILURE);
-                return;
             }
             foo = *iter;
         }
@@ -280,7 +277,6 @@ void parse_options(int argc, char* argv[])
                  << PACKAGE_VERSION
                  << "\n\n";
             exit(EXIT_SUCCESS);
-            break;
 
         case 'b':
             cout << argv[0]
@@ -294,11 +290,10 @@ void parse_options(int argc, char* argv[])
 "operating system, and a detailed description of how to recreate\n"
 "your bug.\n\n";
             exit(EXIT_SUCCESS);
-            break;
 
         case 'f':
         {
-            hashes_location = string((const char*) optarg);
+            hashes_location = string(static_cast<const char*>(optarg));
             ifstream infile { hashes_location.c_str() };
             if (not infile)
             {
@@ -311,14 +306,14 @@ void parse_options(int argc, char* argv[])
         case 'h':
             show_usage(argv[0]);
             exit(EXIT_SUCCESS);
-            break;
 
         case 'p':
             try
             {
-                auto port_num = stoi(optarg);
-                if (port < 1024 || port > 65535)
+                auto port_num = static_cast<uint16_t>(stoi(optarg));
+                if (port_num < 1024 || port_num > 65535)
                     throw new std::exception();
+                port = port_num;
             }
             catch (...)
             {
@@ -329,7 +324,6 @@ void parse_options(int argc, char* argv[])
         default:
             show_usage(argv[0]);
             exit(EXIT_FAILURE);
-            break;
         }
     }
 }
@@ -344,9 +338,9 @@ const vector<pair64>& hashes { hash_set };
     @param level The priority of the message
     @param msg The message to write
 */
-void log(const LogLevel level, const string msg)
+void log(const LogLevel level, const string&& msg)
 {
-    syslog(LOG_MAKEPRI(LOG_USER, static_cast<int>(level)), msg.c_str());
+    syslog(LOG_MAKEPRI(LOG_USER, static_cast<int>(level)), "%s", msg.c_str());
 }
 
 /** Entry point for the application.

@@ -14,8 +14,8 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#ifndef __MAIN_H
-#define __MAIN_H
+#ifndef MAIN_H
+#define MAIN_H
 
 #include "../config.h"
 #include <sys/types.h>
@@ -36,10 +36,13 @@ enum class LogLevel
     EMERGENCY = LOG_EMERG
 };
 
-void log(const LogLevel, const std::string);
+void log(const LogLevel, const std::string&&);
 void handle_client(const int32_t);
 pair64 to_pair64(std::string);
 std::string from_pair64(pair64);
+bool operator<(const pair64& lhs, const pair64& rhs);
+bool operator==(const pair64& lhs, const pair64& rhs);
+bool operator>(const pair64& lhs, const pair64& rhs);
 
 #endif
 

@@ -61,7 +61,7 @@ class NetworkTimeout : public std::exception
 public:
     virtual const char* what() const noexcept {
         return "network timeout";
-    };
+    }
 };
 
 class NetworkError : public std::exception
@@ -158,7 +158,7 @@ void write_line(const int32_t sockfd, string&& line)
 {
     string output = line + "\r\n";
     const char* msg = output.c_str();
-    if (-1 == send(sockfd, (void*) msg, output.size(), 0))
+    if (-1 == send(sockfd, reinterpret_cast<const void*>(msg), output.size(), 0))
         throw NetworkError();
 }
 
@@ -191,14 +191,15 @@ auto tokenize(string&& line, char character = ' ')
     return rv;
 }
 
-string generate_response(auto begin, auto end)
+string generate_response(vector<string>::const_iterator begin, 
+                         vector<string>::const_iterator end)
 {
     string rv = "OK ";
     
     for (auto i = begin ; i != end ; ++i)
     {
-        bool present = binary_search(hashes.begin(),
-                                     hashes.end(), 
+        bool present = binary_search(hashes.cbegin(),
+                                     hashes.cend(), 
                                      to_pair64(*i));
 
         rv += present ? "1" : "0";
@@ -242,7 +243,6 @@ void handle_client(const int32_t fd)
             case Command::Bye:
                 close(fd);
                 return;
-                break;
 
             case Command::Status:
                 write_line(fd, "NOT SUPPORTED");
@@ -259,17 +259,16 @@ void handle_client(const int32_t fd)
             case Command::Downshift:
                 write_line(fd, "NOT OK");
                 break;
-
-            default:
+            
+            case Command::Unknown:
                 write_line(fd, "NOT OK");
                 close(fd);
                 return;
-                break;
             }
             commands = tokenize(read_line(fd));
         }
     }
-    catch (std::exception& e)
+    catch (std::exception&)
     {
     }
 }

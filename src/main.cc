@@ -29,6 +29,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <signal.h>
 #include <regex>
 #include <exception>
+#include <errno.h>
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -370,7 +371,45 @@ int main(int argc, char* argv[])
                                       client_addr,
                                       &client_length)))
         {
-            log(LogLevel::WARN, "dropped a connection");
+            log(LogLevel::WARN, "could not accept connection");
+	    switch (errno) {
+	    case EAGAIN:
+	      log(LogLevel::WARN, "-- EAGAIN");
+	      break;
+	    case ECONNABORTED:
+	      log(LogLevel::WARN, "-- ECONNABORTED");
+	      break;
+	    case EINTR:
+	      log(LogLevel::WARN, "-- EINTR");
+	      break;
+	    case EINVAL:
+	      log(LogLevel::WARN, "-- EINVAL");
+	      break;
+	    case EMFILE:
+	      log(LogLevel::WARN, "-- EMFILE");
+	      break;
+	    case ENFILE:
+	      log(LogLevel::WARN, "-- ENFILE");
+	      break;
+	    case ENOTSOCK:
+	      log(LogLevel::WARN, "-- ENOTSOCK");
+	      break;
+	    case EOPNOTSUPP:
+	      log(LogLevel::WARN, "-- EOPNOTSUPP");
+	      break;
+	    case ENOBUFS:
+	      log(LogLevel::WARN, "-- ENOBUFS");
+	      break;
+	    case ENOMEM:
+	      log(LogLevel::WARN, "-- ENOMEM");
+	      break;
+	    case EPROTO:
+	      log(LogLevel::WARN, "-- EPROTO");
+	      break;
+	    default:
+	      log(LogLevel::WARN, "-- EUNKNOWN");
+	      break;
+	    }
             continue;
         }
 
@@ -381,6 +420,22 @@ int main(int argc, char* argv[])
         {
             log(LogLevel::ALERT, "calling handle_client");
             handle_client(client_sock);
+	    if (-1 == close(client_sock)) {
+	      log(LogLevel::WARN, string("Could not close client: ") + ipaddr);
+	      switch (errno) {
+	      case EBADF:
+		log(LogLevel::WARN, "-- EBADF");
+		break;
+	      case EINTR:
+		log(LogLevel::WARN, "-- EINTR");
+		break;
+	      case EIO:
+		log(LogLevel::WARN, "-- EIO");
+		break;
+	      }
+	    } else {
+	      log(LogLevel::ALERT, string("closed client ") + ipaddr);
+	    }
             return 0;
         }
     }

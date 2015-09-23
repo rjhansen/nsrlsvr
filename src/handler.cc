@@ -134,6 +134,11 @@ string read_line(const int32_t sockfd, int timeout = 15)
         }
         if (pfd.revents & POLLIN) {
             bytes_received = recvfrom(sockfd, &rdbuf[0], rdbuf.size(), 0, NULL, 0);
+	    if (0 == bytes_received) {
+	      log(LogLevel::ALERT, "read_line read on closed socket");
+	      throw NetworkError();
+	    }
+	    
             copy(rdbuf.begin(), 
                  rdbuf.begin() + bytes_received, 
                  back_inserter(buffer));
@@ -241,7 +246,6 @@ void handle_client(const int32_t fd)
                 break;
 
             case Command::Bye:
-                close(fd);
                 return;
 
             case Command::Status:
@@ -262,7 +266,6 @@ void handle_client(const int32_t fd)
             
             case Command::Unknown:
                 write_line(fd, "NOT OK");
-                close(fd);
                 return;
             }
             commands = tokenize(read_line(fd));

@@ -438,6 +438,10 @@ int main(int argc, char* argv[])
 	    }
             return 0;
         }
+	else
+	  {
+	    close(client_sock);
+	  }
     }
 
     // Note that as is normal for daemons, the exit point is never

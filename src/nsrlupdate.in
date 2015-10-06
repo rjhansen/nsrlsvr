@@ -1,14 +1,33 @@
 #!/usr/bin/env python
-#coding=UTF-8
+# coding=UTF-8
+
+"""This app populates a new nsrlsvr hash file from an RDS."""
 
 from __future__ import print_function, unicode_literals
-from re import compile
-from os import sep
-from os.path import exists
+from re import compile as re_compile
+from os import sep, unlink, makedirs
+from os.path import exists, isdir, join as pjoin
 from sys import argv, version_info
+from errno import EEXIST
+
 
 def process_rds(filename):
+    """Processes an RDS."""
     (major, minor, micro, release, serial) = version_info
+
+    def my_mkdir(path):
+        """mkdir -p functionality."""
+        # Python 3.2 and later are much nicer than 2.7-3.1.
+        if major == 3 and minor >= 2:
+            makedirs(path, exist_ok=True)
+        else:
+            try:
+                makedirs(path)
+            except OSError as osexc:
+                if osexc.errno == EEXIST and isdir(path):
+                    pass
+                else:
+                    raise
 
     def open_fh(fn):
         if major == 2:
@@ -23,26 +42,27 @@ def process_rds(filename):
             return line
 
     try:
+        my_mkdir("@pkgdatadir@")
         with open_fh(filename) as fh:
-            with open(sep.join(["@pkgdatadir@", "hashes.txt"]), "w") as out:
-                md5re = compile(r'^"?([A-F0-9]{32})"?$')            
+            with open(pjoin("@pkgdatadir@", "hashes.txt"), "w") as out:
+                md5re = re_compile(r'^"?([A-F0-9]{32})"?$')
                 line = unicodify(fh.readline())
                 while line:
                     cols = line.split(",")
                     if len(cols) > 2:
                         match = md5re.match(cols[1])
                         if match:
-                            md5 = match.group(1) + "\n"                            
+                            md5 = match.group(1) + "\n"
                             out.write(md5)
                     line = unicodify(fh.readline())
-        
-    except IOError as e:
-        print("I/O error while trying to process " + filename)
+
+    except IOError:
+        print("""I/O error while trying to process """ + filename)
         print(
-"""(This is normally caused by one of two things: either you're out of disk
+            """(This is normally caused by one of two things: either you're out of disk
 space, or you lack privileges to write to @pkgdatadir@/hashes.txt file.)""")
 
-if __name__=='__main__':
+if __name__ == '__main__':
     if len(argv) != 2 or not exists(argv[1]):
         print("Usage: nsrlupdate <path-to-NSRLFile.txt>")
     else:

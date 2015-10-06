@@ -30,6 +30,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <regex>
 #include <exception>
 #include <errno.h>
+#include "config.h"
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -251,13 +252,13 @@ auto make_socket()
 void show_usage(string program_name)
 {
     cout <<
-"Usage: " << program_name << " [-vbh -f FILE -p PORT]\n\n"
-"-v : print version information\n"
-"-b : get information on reporting bugs\n"
-"-f : specify an alternate hash set (default: \n     "    
-      << PKGDATADIR << "/hashes.txt)\n"
-"-h : show this help message\n"
-"-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
+         "Usage: " << program_name << " [-vbh -f FILE -p PORT]\n\n"
+         "-v : print version information\n"
+         "-b : get information on reporting bugs\n"
+         "-f : specify an alternate hash set (default: \n     "
+         << PKGDATADIR << "/hashes.txt)\n"
+         "-h : show this help message\n"
+         "-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
 }
 
 /** Parse command-line options.
@@ -286,10 +287,10 @@ void parse_options(int argc, char* argv[])
                  << "\n"
                  << PACKAGE_URL
                  << "\n"
-"Praise, blame and bug reports to " << PACKAGE_BUGREPORT << ".\n\n"
-"Please be sure to include your operating system, version of your\n"
-"operating system, and a detailed description of how to recreate\n"
-"your bug.\n\n";
+                 "Praise, blame and bug reports to " << PACKAGE_BUGREPORT << ".\n\n"
+                 "Please be sure to include your operating system, version of your\n"
+                 "operating system, and a detailed description of how to recreate\n"
+                 "your bug.\n\n";
             exit(EXIT_SUCCESS);
 
         case 'f':
@@ -299,7 +300,7 @@ void parse_options(int argc, char* argv[])
             if (not infile)
             {
                 cerr <<
-"Error: the specified dataset file could not be found.\n\n";
+                     "Error: the specified dataset file could not be found.\n\n";
                 exit(EXIT_FAILURE);
             }
             break;
@@ -372,44 +373,44 @@ int main(int argc, char* argv[])
                                       &client_length)))
         {
             log(LogLevel::WARN, "could not accept connection");
-	    switch (errno) {
-	    case EAGAIN:
-	      log(LogLevel::WARN, "-- EAGAIN");
-	      break;
-	    case ECONNABORTED:
-	      log(LogLevel::WARN, "-- ECONNABORTED");
-	      break;
-	    case EINTR:
-	      log(LogLevel::WARN, "-- EINTR");
-	      break;
-	    case EINVAL:
-	      log(LogLevel::WARN, "-- EINVAL");
-	      break;
-	    case EMFILE:
-	      log(LogLevel::WARN, "-- EMFILE");
-	      break;
-	    case ENFILE:
-	      log(LogLevel::WARN, "-- ENFILE");
-	      break;
-	    case ENOTSOCK:
-	      log(LogLevel::WARN, "-- ENOTSOCK");
-	      break;
-	    case EOPNOTSUPP:
-	      log(LogLevel::WARN, "-- EOPNOTSUPP");
-	      break;
-	    case ENOBUFS:
-	      log(LogLevel::WARN, "-- ENOBUFS");
-	      break;
-	    case ENOMEM:
-	      log(LogLevel::WARN, "-- ENOMEM");
-	      break;
-	    case EPROTO:
-	      log(LogLevel::WARN, "-- EPROTO");
-	      break;
-	    default:
-	      log(LogLevel::WARN, "-- EUNKNOWN");
-	      break;
-	    }
+            switch (errno) {
+            case EAGAIN:
+                log(LogLevel::WARN, "-- EAGAIN");
+                break;
+            case ECONNABORTED:
+                log(LogLevel::WARN, "-- ECONNABORTED");
+                break;
+            case EINTR:
+                log(LogLevel::WARN, "-- EINTR");
+                break;
+            case EINVAL:
+                log(LogLevel::WARN, "-- EINVAL");
+                break;
+            case EMFILE:
+                log(LogLevel::WARN, "-- EMFILE");
+                break;
+            case ENFILE:
+                log(LogLevel::WARN, "-- ENFILE");
+                break;
+            case ENOTSOCK:
+                log(LogLevel::WARN, "-- ENOTSOCK");
+                break;
+            case EOPNOTSUPP:
+                log(LogLevel::WARN, "-- EOPNOTSUPP");
+                break;
+            case ENOBUFS:
+                log(LogLevel::WARN, "-- ENOBUFS");
+                break;
+            case ENOMEM:
+                log(LogLevel::WARN, "-- ENOMEM");
+                break;
+            case EPROTO:
+                log(LogLevel::WARN, "-- EPROTO");
+                break;
+            default:
+                log(LogLevel::WARN, "-- EUNKNOWN");
+                break;
+            }
             continue;
         }
 
@@ -420,33 +421,46 @@ int main(int argc, char* argv[])
         {
             log(LogLevel::ALERT, "calling handle_client");
             handle_client(client_sock);
-	    if (-1 == close(client_sock)) {
-	      log(LogLevel::WARN, string("Could not close client: ") + ipaddr);
-	      switch (errno) {
-	      case EBADF:
-		log(LogLevel::WARN, "-- EBADF");
-		break;
-	      case EINTR:
-		log(LogLevel::WARN, "-- EINTR");
-		break;
-	      case EIO:
-		log(LogLevel::WARN, "-- EIO");
-		break;
-	      }
-	    } else {
-	      log(LogLevel::ALERT, string("closed client ") + ipaddr);
-	    }
+            if (-1 == close(client_sock)) {
+                log(LogLevel::WARN,
+                    string("Could not close client: ") + ipaddr);
+                switch (errno) {
+                case EBADF:
+                    log(LogLevel::WARN, "-- EBADF");
+                    break;
+                case EINTR:
+                    log(LogLevel::WARN, "-- EINTR");
+                    break;
+                case EIO:
+                    log(LogLevel::WARN, "-- EIO");
+                    break;
+                }
+            } else {
+                log(LogLevel::ALERT, string("closed client ") + ipaddr);
+            }
             return 0;
         }
-	else
-	  {
-	    close(client_sock);
-	  }
+        else
+        {
+            if (-1 == close(client_sock)) {
+                log(LogLevel::WARN,
+                    string("Parent could not close client: ") + ipaddr);
+                switch (errno) {
+                case EBADF:
+                    log(LogLevel::WARN, "-- EBADF");
+                    break;
+                case EINTR:
+                    log(LogLevel::WARN, "-- EINTR");
+                    break;
+                case EIO:
+                    log(LogLevel::WARN, "-- EIO");
+                    break;
+                }
+            }
+        }
     }
 
     // Note that as is normal for daemons, the exit point is never
     // reached.  This application does not normally terminate.
     return EXIT_SUCCESS;
 }
-
-

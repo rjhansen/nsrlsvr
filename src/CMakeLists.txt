@@ -7,6 +7,10 @@ add_definitions(-DPACKAGE_URL="http://rjhansen.github.io/nsrlsvr")
 add_definitions(-DPACKAGE_BUGREPORT="rjh@sixdemonbag.org")
 install(TARGETS nsrlsvr RUNTIME DESTINATION bin)
 
-configure_file(nsrlupdate.in nsrlupdate)
+configure_file(nsrlupdate.in ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/nsrlupdate)
+file(COPY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/nsrlupdate
+  DESTINATION ${CMAKE_BINARY_DIR}
+  FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ
+  GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 add_custom_target(nsrlupdate ALL)
-install(FILES nsrlupdate DESTINATION bin)
+install(TARGETS nsrlupdate DESTINATION bin)

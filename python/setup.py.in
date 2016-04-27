@@ -1,6 +1,0 @@
-from setuptools import setup, find_packages
-
-setup(name='nsrlupdate',
-      version='${PACKAGE_VERSION}',
-      package_dir={ '': '${CMAKE_CURRENT_SOURCE_DIR}' },
-      scripts=['nsrlupdate'])

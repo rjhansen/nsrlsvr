@@ -5,3 +5,8 @@ add_definitions(-DPKGDATADIR="${PKGDATADIR}")
 add_definitions(-DPACKAGE_VERSION="${PACKAGE_VERSION}")
 add_definitions(-DPACKAGE_URL="http://rjhansen.github.io/nsrlsvr")
 add_definitions(-DPACKAGE_BUGREPORT="rjh@sixdemonbag.org")
+install(TARGETS nsrlsvr RUNTIME DESTINATION bin)
+
+configure_file(nsrlupdate.in nsrlupdate)
+add_custom_target(nsrlupdate ALL)
+install(FILES nsrlupdate DESTINATION bin)

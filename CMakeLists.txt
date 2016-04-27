@@ -6,6 +6,9 @@ set(PACKAGE_VERSION ${VERSION})
 include(GNUInstallDirs)
 set(PKGDATADIR ${CMAKE_INSTALL_FULL_DATADIR}/nsrlsvr)
 add_subdirectory(src)
+
+install(DIRECTORY ${CMAKE_BINARY_DIR}/man1 DESTINATION share/man)
+
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_PACKAGE_SUMMARY "A server for forensics triage using NIST's NSRL RDS.")
 set(CPACK_RPM_PACKAGE_NAME "nsrlsvr")

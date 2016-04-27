@@ -42,9 +42,9 @@ def process_rds(filename):
             return line
 
     try:
-        my_mkdir("@pkgdatadir@")
+        my_mkdir("")
         with open_fh(filename) as fh:
-            with open(pjoin("@pkgdatadir@", "hashes.txt"), "w") as out:
+            with open(pjoin("", "hashes.txt"), "w") as out:
                 md5re = re_compile(r'^"?([A-F0-9]{32})"?$')
                 line = unicodify(fh.readline())
                 while line:
@@ -60,7 +60,7 @@ def process_rds(filename):
         print("""I/O error while trying to process """ + filename)
         print(
             """(This is normally caused by one of two things: either you're out of disk
-space, or you lack privileges to write to @pkgdatadir@/hashes.txt file.)""")
+space, or you lack privileges to write to /hashes.txt file.)""")
 
 if __name__ == '__main__':
     if len(argv) != 2 or not exists(argv[1]):

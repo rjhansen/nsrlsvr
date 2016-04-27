@@ -52,7 +52,7 @@ using std::getline;
 namespace
 {
 vector<pair64> hash_set;
-string hashes_location { CMAKE_INSTALL_FULL_DATADIR "/nsrlsvr/hashes.txt" };
+string hashes_location { PKGDATADIR "/hashes.txt" };
 uint16_t port { 9120 };
 
 /** Attempts to load a set of MD5 hashes from disk.
@@ -255,7 +255,7 @@ void show_usage(string program_name)
          "-v : print version information\n"
          "-b : get information on reporting bugs\n"
          "-f : specify an alternate hash set (default: \n     "
-         CMAKE_INSTALL_FULL_DATADIR "/nsrlsvr/hashes.txt)\n"
+         PKGDATADIR "/hashes.txt)\n"
          "-h : show this help message\n"
          "-p : listen on PORT, between 1024 and 65535 (default: 9120)\n\n";
 }

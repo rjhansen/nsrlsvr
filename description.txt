@@ -1,0 +1,6 @@
+nsrlsvr helps forensicists with data triage by making it easy to query
+NIST's database of known MD5 hashes.  Once loaded with a set of hashes,
+forensicists can use tools like nsrllookup to check for presence or
+absence in the dataset.  nsrlsvr stores everything in an efficient RAM
+structure for speed, and is capable of supporting extremely high
+query volumes.

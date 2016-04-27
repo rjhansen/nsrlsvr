@@ -1,0 +1,7 @@
+add_executable(nsrlsvr handler.cc main.cc to_pair64.cc)
+set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD 14)
+set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD_REQUIRED true)
+add_definitions(-DCMAKE_INSTALL_FULL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
+add_definitions(-DPACKAGE_VERSION="${PACKAGE_VERSION}")
+add_definitions(-DPACKAGE_URL="http://rjhansen.github.io/nsrlsvr")
+add_definitions(-DPACKAGE_BUGREPORT="rjh@sixdemonbag.org")

@@ -1,3 +1,4 @@
+set(CMAKE_BUILD_TYPE Release)
 add_executable(nsrlsvr handler.cc main.cc to_pair64.cc)
 set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD 14)
 set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD_REQUIRED true)

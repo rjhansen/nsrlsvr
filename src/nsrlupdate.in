@@ -60,7 +60,7 @@ def process_rds(filename):
         print("""I/O error while trying to process """ + filename)
         print(
             """(This is normally caused by one of two things: either you're out of disk
-space, or you lack privileges to write to @pkgdatadir@/hashes.txt file.)""")
+space, or you lack privileges to write to ${PKGDATADIR}/hashes.txt file.)""")
 
 if __name__ == '__main__':
     if len(argv) != 2 or not exists(argv[1]):

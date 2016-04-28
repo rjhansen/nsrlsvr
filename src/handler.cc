@@ -138,7 +138,7 @@ read_line(const int32_t sockfd, int timeout = 15)
     if (iter != buffer.end()) {
       string line(buffer.begin(), iter);
       if (line.at(line.size() - 1) == '\r') {
-        line = string(line.begin(), line.end() - 1)
+        line = string(line.begin(), line.end() - 1);
       }
       buffer.erase(buffer.begin(), iter + 1);
       return line;

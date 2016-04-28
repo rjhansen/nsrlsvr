@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015, Robert J. Hansen <rjh@sixdemonbag.org>
+Copyright (c) 2015-2016, Robert J. Hansen <rjh@sixdemonbag.org>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -17,22 +17,22 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #ifndef MAIN_H
 #define MAIN_H
 
-#include <sys/types.h>
 #include <string>
-#include <utility>
+#include <sys/types.h>
 #include <syslog.h>
+#include <utility>
 
 using ulong64 = unsigned long long;
 using pair64 = std::pair<ulong64, ulong64>;
 
 enum class LogLevel
 {
-    INFO = LOG_INFO,
-    WARN = LOG_WARNING,
-    DEBUG = LOG_DEBUG,
-    CRITICAL = LOG_CRIT,
-    ALERT = LOG_ALERT,
-    EMERGENCY = LOG_EMERG
+  INFO = LOG_INFO,
+  WARN = LOG_WARNING,
+  DEBUG = LOG_DEBUG,
+  CRITICAL = LOG_CRIT,
+  ALERT = LOG_ALERT,
+  EMERGENCY = LOG_EMERG
 };
 
 void log(const LogLevel, const std::string&&);

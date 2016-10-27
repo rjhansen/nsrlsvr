@@ -1,43 +1,57 @@
-.Dd February 8, 2015
-.Dt NSRLSVR 1
-.Os
-.Sh NAME
-.Nm nsrlsvr
-.Nd server yielding hashes from NIST's NSRL RDS
-.Sh SYNOPSIS
-.Nm nsrlsvr
-.Op Fl b
-.Op Fl h
-.Op Fl v
-.Op Fl f Ar hash-file
-.Op Fl p Ar port
-.Sh DESCRIPTION
-nsrlsvr provides a daemon that services queries from clients requesting information
-about whether certain hash values are present in the NIST National Software Reference
-Laboratory Reference Data Set (NSRL RDS).
-.Sh OPTIONS
-.Bl -tag -width Ds
-.It Fl b
-show information on submitting bug reports, then exit
-.It Fl h
-show a help screen, then exit
-.It Fl v
-show version information, then exit
-.It Fl f Ar hash-file
-specify an alternate hash file in
-.Ar hash-file
-.It Fl p Ar port
-listen on port (default: 9120)
-.Ar port
-.El
-.Sh NOTES
-To support the full NSRL RDS requires a lot of memory.  Although it will run on
-a 4Gb system, the results may be unsatisfactory.  A 64-bit OS with at least 8Gb
-of RAM is recommended.
-.Pp
-.Sh BUGS
+.TH NSRLSVR 1 "October 27, 2016" "1.6.1"
+.SH NAME
+nsrlsvr - server yielding hashes from NIST's NSRL RDS
+.SH SYNOPSIS
+.B nsrlsvr
+[\fB\-h\fR,\fB\-\-help\fR]
+[\fB\-v\fR,\fB\-\-version\fR]
+[\fB\-\-bug\-report\fR]
+[\fB\-\-dry\-run\fR]
+[\fB\-f\fR,\fB\-\-file\fR \fIFILE\fR]
+[\fB\-p\fR,\fB\-\-port\fR \fIPORT\fr]
+.SH DESCRIPTION
+nsrlsvr provides a daemon that services queries from clients requesting
+information about whether certain hash values are present in the NIST
+National Software Reference Laboratory Reference Data Set (NSRL RDS).
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Help about running nsrlsvr
+.TP
+.BR \-v ", " \-\-version
+Show version information
+.TP
+.BR \-\-bug\-report
+Get the URL for nsrlsvr's bug tracker
+.TP
+.BR \-\-dry\-run
+Attempt to stand up the server, but stop before servicing any requests.
+This also redirects error messages, which would have gone to syslog, to
+standard error.  This option is occasionally useful for debugging.
+.TP
+.BR \-f ", " \-\-file " " \fIFILE\fR
+Use \fIFILE\fR instead of the compiled-in default (which can be discovered
+by running \fB\-\-help\fR)
+.TP
+.BR \-p ", " \-\-port " " \fIPORT\fR
+Use \fIPORT\fR instead of the compiled-in default (normally 9120)
+.SH NOTES
+Installing this package \fBdoes not\fR install the associated database!
+.PP
+NIST releases updates to the NSRL RDS on a regular schedule.  nsrlsvr is
+not updated on a regular schedule.  You must download the latest minimal
+NSRL RDS from http://www.nsrl.nist.gov/Downloads.htm#reduced, uncompress
+it, and run the \fBnsrlupdate\fR script on the output.  This will create
+the necessary database.
+.PP
+To support the full NSRL RDS requires a lot of memory.  Although it will
+run on a 4Gb system, the results may be unsatisfactory.  A 64-bit OS with
+at least 8Gb of RAM is recommended.
+.SH BUGS
 None known.
-.Sh SEE ALSO
-nsrllookup(1)
-.Sh AUTHOR
-Robert J. Hansen <rjh@secret-alchemy.com>
+.SH SEE ALSO
+.BR nsrllookup (1)
+.PP
+.BR nsrlupdate (1)
+.SH AUTHOR
+Robert J. Hansen <rob@hansen.engineering>

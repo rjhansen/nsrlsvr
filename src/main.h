@@ -21,9 +21,9 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <sys/types.h>
 #include <syslog.h>
 #include <utility>
+#include <cstdint>
 
-using ulong64 = unsigned long long;
-using pair64 = std::pair<ulong64, ulong64>;
+using pair64 = std::pair<uint64_t, uint64_t>;
 
 enum class LogLevel
 {

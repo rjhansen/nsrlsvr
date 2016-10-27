@@ -1,37 +1,30 @@
-.Dd February 9, 2015
-.Dt NSRLUPDATE 1
-.Os
-.Sh NAME
-.Nm nsrlupdate
-.Nd updates nsrlsvr's hash database
-.Sh SYNOPSIS
-.Nm nsrlupdate
-.Op Ar NSRLFile.txt
-.Sh DESCRIPTION
+.TH NSRLUPDATE 1 "October 27, 2016" "1.6.1"
+.SH NAME
+nsrlupdate - updates nsrlsvr's hash database
+.SH SYNOPSIS
+nsrlupdate \fI[NSRLFile.txt]\fR
+.SH DESCRIPTION
 nsrlupdate is used to replace an existing nsrlsvr hash database with the
 contents of a new NSRL RDS file.  These files, which may be downloaded
-from http://www.nsrl.nist.gov, are released in ZIP format every few
-months.
-
+from http://www.nsrl.nist.gov/Downloads.htm#reduced, are released in ZIP
+format every few months.
+.PP
 To keep your hash database up-to-date, periodically download the latest
-NSRL RDS minimal dataset (normally named rds_XYZ.zip) and extract the
+NSRL RDS minimal dataset (normally named rds_XYZm.zip) and extract the
 contents into a temporary directory.  Somewhere in that temporary
 directory you'll find a file called "NSRLFile.txt"; make note of the path
 to it.  Then call nsrlupdate, passing the path to NSRLFile.txt as an 
 argument, and be prepared to wait for a while.
-
+.PP
 nsrlupdate doesn't require much memory, but it may take a lot of time.
-As of RDS 2.47m, there are over 40 million hashes to extract.  The final
-hashes.txt file will be around 1.3Gb in size.  Expect this to only go up
-as subsequent RDSes are released.
-
+As of RDS 2.53m, there are over 47 million hashes to extract.
+.PP
 nsrlupdate will wipe out the current contents of the hash database, so
 be careful if you've appended your own custom dataset.
-
-.Sh BUGS
+.SH BUGS
 nsrlupdate is a Frankenstein's monster of Python 2 and Python 3 support.
 The good news is, it's a fairly small script.
-.Sh SEE ALSO
+.SH SEE ALSO
 nsrlsvr(1)
-.Sh AUTHOR
-Robert J. Hansen <rjh@secret-alchemy.com>
+.SH AUTHOR
+Robert J. Hansen <rob@hansen.engineering>

@@ -227,6 +227,7 @@ auto make_socket() {
 */
 void parse_options(int argc, char *argv[]) {
   std::array<char, PATH_MAX> filename_buffer;
+  char* filepath {nullptr};
   fill(filename_buffer.begin(), filename_buffer.end(), 0);
   options_description options{"nsrlsvr options"};
   options.add_options()("help,h", "Help screen")("version,v",
@@ -236,9 +237,7 @@ void parse_options(int argc, char *argv[]) {
       "hash file")(
       "port,p", value<int>()->default_value(9120), "port")(
       "log", "use this instead of syslog")(
-      "dry-run", "test configuration"
-      )
-      );
+      "dry-run", "test configuration");
   variables_map vm;
   store(parse_command_line(argc, argv, options), vm);
 
@@ -257,9 +256,51 @@ void parse_options(int argc, char *argv[]) {
             "<rob@hansen.engineering>.\n";
     exit(EXIT_SUCCESS);
   }
-  port = vm["port"].as<uint16_t>();
-  realpath(vm["file"].as<string>().c_str(), &filename_buffer[0]);
-  hashes_location = string(&filename_buffer[0]);
+  port = static_cast<uint16_t>(atoi(vm["port"].as<string>().c_str()));
+  filepath = realpath(vm["file"].as<string>().c_str(), &filename_buffer[0]);
+  if (nullptr == filepath) {
+    switch (errno) {
+    case EACCES:
+      cerr << "Could not access file path "
+	   << vm["file"].as<string>()
+	   << "\n(Do you have read privileges?)\n";
+      break;
+    case EINVAL:
+      cerr << "Somehow, the system believes the file path passed to it\n"
+	   << "is null.  This is weird and probably a bug.  Please report\n"
+	   << "it!\n";
+      break;
+    case EIO:
+      cerr << "An I/O error occurred while reading "
+	   << vm["file"].as<string>() << "\n";
+      break;
+    case ELOOP:
+      cerr << "Too many symbolic links were found while translating "
+	   << vm["file"].as<string>() << " into an absolute path.\n";
+      break;
+    case ENAMETOOLONG:
+      cerr << "The file path " << vm["file"].as<string>()
+	   << " is too long.\n";
+      break;
+    case ENOENT:
+      cerr << "The file " << vm["file"].as<string>()
+	   << " could not be found.\n";
+      break;
+    case ENOMEM:
+      cerr << "Strangely, the system ran out of memory while processing\n"
+	   << "your request.  This is probably a bug in nsrlsvr.\n";
+      break;
+    case ENOTDIR:
+      cerr << "A component of the file path " << vm["file"].as<string>()
+	   << " is not a directory.";
+      break;
+    default:
+      cerr << "... wtfbbq?  This should never trip.  It's an nsrlsvr bug.\n";
+      break;
+    }
+    exit(EXIT_FAILURE);
+  }
+  hashes_location = string(filepath);
   if (not ifstream(hashes_location.c_str())) {
     cerr << "Could not open " + hashes_location + " for reading.\n";
     exit(EXIT_FAILURE);

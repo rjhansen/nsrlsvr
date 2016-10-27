@@ -62,8 +62,6 @@ namespace {
 vector<pair64> hash_set;
 string hashes_location{PKGDATADIR "/hashes.txt"};
 uint16_t port{9120};
-bool use_alt_log{false};
-string alt_log;
 bool dry_run{false};
 
 /** Attempts to load a set of MD5 hashes from disk.
@@ -73,14 +71,13 @@ bool dry_run{false};
   */
 void load_hashes() {
   const regex md5_re{"^[A-Fa-f0-9]{32}$"};
-  vector<char> buf(1024, 0);
   uint32_t hash_count{0};
   ifstream infile{hashes_location.c_str()};
 
   // As of this writing, the RDS had about 40 million entries.
   // When a vector needs to grow, it normally does so by doubling
   // the former allocation -- so after this, the next stop is a
-  // 90 million allocation (@ 16 bytes per, or 1.4 GiB).  If you're
+  // 100 million allocation (@ 16 bytes per, or 1.6 GB).  If you're
   // maintaining this code, try to keep the reserve a few million
   // larger than the RDS currently is, to give yourself room to
   // grow without a vector realloc.
@@ -227,7 +224,7 @@ auto make_socket() {
 */
 void parse_options(int argc, char *argv[]) {
   std::array<char, PATH_MAX> filename_buffer;
-  char* filepath {nullptr};
+  char* filepath {&filename_buffer[0]};
   fill(filename_buffer.begin(), filename_buffer.end(), 0);
   options_description options{"nsrlsvr options"};
   options.add_options()("help,h", "Help screen")("version,v",
@@ -235,11 +232,12 @@ void parse_options(int argc, char *argv[]) {
       "bug-report,b", "Display bug reporting information")(
       "file,f", value<string>()->default_value(PKGDATADIR "/hashes.txt"),
       "hash file")(
-      "port,p", value<int>()->default_value(9120), "port")(
-      "log", "use this instead of syslog")(
+      "port,p", value<uint16_t>()->default_value(9120), "port")(
       "dry-run", "test configuration");
   variables_map vm;
   store(parse_command_line(argc, argv, options), vm);
+
+  dry_run = vm.count("dry-run") ? true : false;
 
   if (vm.count("help")) {
       cout << options << "\n";
@@ -252,46 +250,42 @@ void parse_options(int argc, char *argv[]) {
     exit(EXIT_SUCCESS);
   }
   if (vm.count("bug-report")) {
-    cout << "Praise and blame goes to Rob Hansen "
-            "<rob@hansen.engineering>.\n";
+    cout << "To file a bug report, visit "
+    "https://github.com/rjhansen/nsrlsvr/issues\n";
     exit(EXIT_SUCCESS);
   }
-  port = static_cast<uint16_t>(atoi(vm["port"].as<string>().c_str()));
-  filepath = realpath(vm["file"].as<string>().c_str(), &filename_buffer[0]);
-  if (nullptr == filepath) {
+  port = vm["port"].as<uint16_t>();
+  string relpath = vm["file"].as<string>();
+  if (nullptr == (filepath = realpath(relpath.c_str(), filepath))) {
     switch (errno) {
     case EACCES:
-      cerr << "Could not access file path "
-	   << vm["file"].as<string>()
+      cerr << "Could not access file path " << relpath
 	   << "\n(Do you have read privileges?)\n";
       break;
     case EINVAL:
       cerr << "Somehow, the system believes the file path passed to it\n"
-	   << "is null.  This is weird and probably a bug.  Please report\n"
-	   << "it!\n";
+	   "is null.  This is weird and probably a bug.  Please report\n"
+	   "it!\n";
       break;
     case EIO:
-      cerr << "An I/O error occurred while reading "
-	   << vm["file"].as<string>() << "\n";
+      cerr << "An I/O error occurred while reading " << relpath << "\n";
       break;
     case ELOOP:
       cerr << "Too many symbolic links were found while translating "
-	   << vm["file"].as<string>() << " into an absolute path.\n";
+	   << relpath << " into an absolute path.\n";
       break;
     case ENAMETOOLONG:
-      cerr << "The file path " << vm["file"].as<string>()
-	   << " is too long.\n";
+      cerr << "The file path " << relpath << " is too long.\n";
       break;
     case ENOENT:
-      cerr << "The file " << vm["file"].as<string>()
-	   << " could not be found.\n";
+      cerr << "The file " << relpath << " could not be found.\n";
       break;
     case ENOMEM:
       cerr << "Strangely, the system ran out of memory while processing\n"
-	   << "your request.  This is probably a bug in nsrlsvr.\n";
+	   "your request.  This is probably a bug in nsrlsvr.\n";
       break;
     case ENOTDIR:
-      cerr << "A component of the file path " << vm["file"].as<string>()
+      cerr << "A component of the file path " << relpath
 	   << " is not a directory.";
       break;
     default:
@@ -309,10 +303,7 @@ void parse_options(int argc, char *argv[]) {
 }
 
 /** The set of all loaded hashes, represented as a const reference. */
-const vector<pair64> &hashes{hash_set};
-
-/** true if we're doing a dry run */
-const bool& is_dry_run{dry_run};
+const vector<pair64>& hashes{hash_set};
 
 /** Writes to syslog with the given priority level.
 
@@ -320,6 +311,9 @@ const bool& is_dry_run{dry_run};
     @param msg The message to write
 */
 void log(const LogLevel level, const string &&msg) {
+    if (dry_run)
+        cerr << msg << "\n";
+    else
   syslog(LOG_MAKEPRI(LOG_USER, static_cast<int>(level)), "%s", msg.c_str());
 }
 
@@ -330,18 +324,26 @@ void log(const LogLevel level, const string &&msg) {
 */
 int main(int argc, char *argv[]) {
   parse_options(argc, argv);
-  daemonize();
-  load_hashes();
-  // The following line helps avoid zombie processes.  Normally parents
-  // need to reap their children in order to prevent zombie processes;
-  // if SIGCHLD is set to SIG_IGN, though, the processes can terminate
-  // normally.
-  signal(SIGCHLD, SIG_IGN);
+
   int32_t client_sock{0};
   int32_t svr_sock{make_socket()};
   sockaddr_in client;
   sockaddr *client_addr = reinterpret_cast<sockaddr *>(&client);
   socklen_t client_length{sizeof(client)};
+
+  if (! dry_run)
+    daemonize();
+
+  load_hashes();
+
+  // The following line helps avoid zombie processes.  Normally parents
+  // need to reap their children in order to prevent zombie processes;
+  // if SIGCHLD is set to SIG_IGN, though, the processes can terminate
+  // normally.
+  signal(SIGCHLD, SIG_IGN);
+
+  if (dry_run)
+    return EXIT_SUCCESS;
 
   while (true) {
     if (0 > (client_sock = accept(svr_sock, client_addr, &client_length))) {

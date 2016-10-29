@@ -331,16 +331,16 @@ int main(int argc, char* argv[])
 {
     parse_options(argc, argv);
 
+    if (!dry_run)
+        daemonize();
+
+    load_hashes();
+
     int32_t client_sock{ 0 };
     int32_t svr_sock{ make_socket() };
     sockaddr_in client;
     sockaddr* client_addr = reinterpret_cast<sockaddr*>(&client);
     socklen_t client_length{ sizeof(client) };
-
-    if (!dry_run)
-        daemonize();
-
-    load_hashes();
 
     // The following line helps avoid zombie processes.  Normally parents
     // need to reap their children in order to prevent zombie processes;

@@ -25,9 +25,10 @@ If either of those two describes you, read on!
 
 1. A UNIX operating system
 2. A C++ compiler that supports the C++14 standard
-3. Python 3.5 or later
-4. A list of unique MD5 hashes, each line consisting of thirty-two ASCII characters terminated by a newline
-5. [CMake](http://www.cmake.com)
+3. The Boost C++ libraries and development headers
+4. Python 3.5 or later
+5. A list of unique MD5 hashes, each line consisting of thirty-two ASCII characters terminated by a newline
+6. [CMake](http://www.cmake.com)
 
 ## How to install
 

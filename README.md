@@ -35,10 +35,10 @@ If either of those two describes you, read on!
 1. Download the [latest official release of nsrlsvr](https://github.com/rjhansen/nsrlsvr/tarball/master)
 2. `tar xzf [downloaded-file]` to uncompress it
 3. `cd` into the directory you uncompressed it to
-4. `which python3` will tell you if you have Python 3 installed on your system, and if so, where
-5. `cmake -DPYTHON_EXECUTABLE=/path/to/python3 .` will initialize the build system (don’t forget that trailing period)
-6. `make install` will install nsrlsvr to `/usr/local/bin`.
-7. Put your hash database in `/usr/local/share/nsrlsvr/hashes.txt`
+4. ``cmake -DPYTHON_EXECUTABLE=`which python3` .`` will initialize the build system (don’t forget that trailing period)
+5. `make` to build nsrlsvr
+6. `sudo make install` to install it to `/usr/local/bin`.
+7. Build your dataset (see below)
 8. Start nsrlsvr with `nsrlsvr` and you’re off to the races.  Any nsrllookup client can now use you as a hash server.
 
 ## How do I make my own dataset from NIST’s minimal RDS?
@@ -50,4 +50,4 @@ nsrlsvr comes with a tool called `nsrlupdate`.  You’ll want to use it.
 3. `nsrlupdate /path/to/NSRLFile.txt`
 4. This may take a long time but you’ll have a complete NSRL RDS hash set when you finish.
 
-Alternately, you can drop your own file of hashes in `/usr/local/share/nsrlsvr/hashes.txt`.  They must be uppercase UTF-8 or ISO8859-1 containing **only** the letters A-F or 0-9.  There must be thirty-two of them terminated by a newline.
+Alternately, you can drop your own file of hashes in `/usr/local/share/nsrlsvr/hashes.txt`.  They must be uppercase UTF-8 containing **only** the letters A-F or 0-9, with thirty-two characters per line terminated by a newline.

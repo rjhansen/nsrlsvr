@@ -83,7 +83,7 @@ void load_hashes()
     // Don't even try.  Just log the error and bail out.  Let the end
     // user worry about installing more RAM.
     try {
-        hash_set.reserve(75000000);
+        hash_set.reserve(50000000);
     } catch (std::bad_alloc&) {
         log(LogLevel::ALERT, "couldn't reserve enough memory");
         exit(EXIT_FAILURE);

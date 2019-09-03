@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015-2016, Robert J. Hansen <rjh@sixdemonbag.org>
+Copyright (c) 2015-2019, Robert J. Hansen <rjh@sixdemonbag.org>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -16,68 +16,55 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include "main.h"
 #include <algorithm>
-#include <ctype.h>
 #include <iostream>
 #include <stdexcept>
+#include <regex>
+#include <sstream>
+#include <iomanip>
 
 using std::pair;
 using std::string;
-using std::transform;
 using std::make_pair;
+using std::regex;
+using std::regex_match;
+using std::invalid_argument;
+using std::stringstream;
+using std::setw;
+using std::setfill;
+using std::hex;
 
 string
-from_pair64(pair64 input)
+from_pair64(const pair64& input)
 {
-    static string hexadecimal{ "0123456789ABCDEF" };
-
-    string left = "", right = "";
-    uint64_t first = input.first;
-    uint64_t second = input.second;
-
-    for (int i = 0; i < 16; ++i) {
-        left = hexadecimal[first & 0x0F] + left;
-        right = hexadecimal[second & 0x0F] + right;
-        first >>= 4;
-        second >>= 4;
-    }
-
-    return left + right;
+    stringstream stream;
+    stream << setfill('0') 
+        << setw(sizeof(unsigned long long) * 2)
+        << hex
+        << input.first
+        << input.second;
+    return string(stream.str());
 }
 
 pair64
-to_pair64(string input)
+to_pair64(const string& input)
 {
-    uint64_t left{ 0 };
-    uint64_t right{ 0 };
-    uint8_t val1{ 0 };
-    uint8_t val2{ 0 };
-    size_t index{ 0 };
-    char ch1{ 0 };
-    char ch2{ 0 };
+    static const regex md5_re{ "^[A-Fa-f0-9]{32}$" };
 
-    transform(input.begin(), input.end(), input.begin(), ::tolower);
+    if (!regex_match(input.cbegin(), input.cend(), md5_re))
+        throw invalid_argument("not a hash");
+    
+    auto first = string(input.cbegin(), input.cbegin() + 16);
+    auto second = string(input.cbegin() + 16, input.cend());    
+    auto left = std::strtoull(first.c_str(), nullptr, 16);
+    auto right = std::strtoull(second.c_str(), nullptr, 16);
 
-    for (index = 0; index < 16; index += 1) {
-        ch1 = input[index];
-        ch2 = input[index + 16];
-
-        val1 = (ch1 >= '0' and ch1 <= '9') ? static_cast<uint8_t>(ch1 - '0')
-                                           : static_cast<uint8_t>(ch1 - 'a') + 10;
-        val2 = (ch2 >= '0' and ch2 <= '9') ? static_cast<uint8_t>(ch2 - '0')
-                                           : static_cast<uint8_t>(ch2 - 'a') + 10;
-
-        left = (left << 4) + val1;
-        right = (right << 4) + val2;
-    }
     return make_pair(left, right);
 }
 
 bool operator<(const pair64& lhs, const pair64& rhs)
 {
-    return (lhs.first < rhs.first)
-        ? true
-        : (lhs.first == rhs.first and lhs.second < rhs.second) ? true
-                                                               : false;
+    return (lhs.first < rhs.first) or
+        (lhs.first == rhs.first and lhs.second < rhs.second);
 }
 
 bool operator==(const pair64& lhs, const pair64& rhs)
@@ -87,5 +74,5 @@ bool operator==(const pair64& lhs, const pair64& rhs)
 
 bool operator>(const pair64& lhs, const pair64& rhs)
 {
-    return ((not(lhs < rhs)) and (not(lhs == rhs)));
+    return ((!(lhs < rhs)) and (!(lhs == rhs)));
 }

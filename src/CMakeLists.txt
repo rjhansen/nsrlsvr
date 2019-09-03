@@ -1,7 +1,6 @@
-set(CMAKE_BUILD_TYPE Debug)
 include_directories(${Boost_INCLUDE_DIRS})
 add_executable(nsrlsvr handler.cc main.cc to_pair64.cc)
-target_link_libraries(nsrlsvr ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(nsrlsvr ${Boost_LIBRARIES} Threads::Threads)
 set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD 14)
 set_property(TARGET nsrlsvr PROPERTY CXX_STANDARD_REQUIRED true)
 add_definitions(-DPKGDATADIR="${PKGDATADIR}")

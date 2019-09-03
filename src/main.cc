@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015-2016, Robert J. Hansen <rjh@sixdemonbag.org>
+Copyright (c) 2015-2019, Robert J. Hansen <rjh@sixdemonbag.org>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -16,8 +16,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include "main.h"
 #include <algorithm>
-#include <arpa/inet.h>
 #include <boost/program_options.hpp>
+#include <boost/asio.hpp>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -32,11 +32,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <time.h>
 #include <unistd.h>
 #include <vector>
-
-#ifdef __FreeBSD__
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif
 
 using std::string;
 using std::transform;
@@ -57,6 +52,7 @@ using boost::program_options::store;
 using boost::program_options::parse_command_line;
 using boost::program_options::notify;
 using boost::program_options::value;
+using boost::asio::ip::tcp;
 
 namespace {
 vector<pair64> hash_set;
@@ -131,7 +127,7 @@ void load_hashes()
             hash_count += 1;
             if (0 == hash_count % 1000000) {
                 string howmany{ to_string(hash_count / 1000000) };
-                log(LogLevel::ALERT, "loaded " + howmany + " million hashes");
+                log(LogLevel::INFO, "loaded " + howmany + " million hashes");
             }
         } catch (std::bad_alloc&) {
             log(LogLevel::ALERT, "couldn't allocate enough memory");
@@ -147,16 +143,16 @@ void load_hashes()
 
     if (hash_set.size() > 1) {
         log(LogLevel::INFO, "ensuring no duplicates");
-        pair64 foo{ hash_set.at(0) };
         for (auto iter = (hash_set.cbegin() + 1); iter != hash_set.cend(); ++iter) {
-            if (foo == *iter) {
+            if (*(iter - 1) == *iter) {
                 log(LogLevel::ALERT, "hash file contains duplicates -- "
                                      "shutting down!");
                 exit(EXIT_FAILURE);
             }
-            foo = *iter;
         }
     }
+
+    log(LogLevel::INFO, "successfully loaded hashes");
 }
 
 /** Converts this process into a well-behaved UNIX daemon.*/
@@ -189,36 +185,6 @@ void daemonize()
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
-}
-
-/** Creates a server socket to listen for client connections. */
-auto make_socket()
-{
-    /* If anything in here is surprising, please check the standard
-     literature to make sure you understand TCP/IP. */
-
-    sockaddr_in server;
-    memset(static_cast<void*>(&server), 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = htonl(INADDR_ANY);
-    server.sin_port = htons(port);
-
-    const auto sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0) {
-        log(LogLevel::WARN, "couldn't create a server socket");
-        exit(EXIT_FAILURE);
-    }
-    if (0 > bind(sock, reinterpret_cast<sockaddr*>(&server), sizeof(server))) {
-        log(LogLevel::WARN, "couldn't bind to port");
-        exit(EXIT_FAILURE);
-    }
-    if (0 > listen(sock, 20)) {
-        log(LogLevel::WARN, "couldn't listen for clients");
-        exit(EXIT_FAILURE);
-    }
-    log(LogLevel::INFO, "ready for clients");
-
-    return sock;
 }
 
 /** Parse command-line options.
@@ -329,18 +295,14 @@ void log(const LogLevel level, const string&& msg)
 */
 int main(int argc, char* argv[])
 {
+    static_assert(sizeof(unsigned long long) == 8,
+        "wait, what kind of system is this?");
     parse_options(argc, argv);
 
     if (!dry_run)
         daemonize();
 
     load_hashes();
-
-    int32_t client_sock{ 0 };
-    int32_t svr_sock{ make_socket() };
-    sockaddr_in client;
-    sockaddr* client_addr = reinterpret_cast<sockaddr*>(&client);
-    socklen_t client_length{ sizeof(client) };
 
     // The following line helps avoid zombie processes.  Normally parents
     // need to reap their children in order to prevent zombie processes;
@@ -350,89 +312,26 @@ int main(int argc, char* argv[])
 
     if (dry_run)
         return EXIT_SUCCESS;
+    
+    boost::asio::io_service io_service;
+    tcp::endpoint endpoint(tcp::v4(), port);
+    tcp::acceptor acceptor(io_service, endpoint);
 
     while (true) {
-        if (0 > (client_sock = accept(svr_sock, client_addr, &client_length))) {
-            log(LogLevel::WARN, "could not accept connection");
-            switch (errno) {
-            case EAGAIN:
-                log(LogLevel::WARN, "-- EAGAIN");
-                break;
-            case ECONNABORTED:
-                log(LogLevel::WARN, "-- ECONNABORTED");
-                break;
-            case EINTR:
-                log(LogLevel::WARN, "-- EINTR");
-                break;
-            case EINVAL:
-                log(LogLevel::WARN, "-- EINVAL");
-                break;
-            case EMFILE:
-                log(LogLevel::WARN, "-- EMFILE");
-                break;
-            case ENFILE:
-                log(LogLevel::WARN, "-- ENFILE");
-                break;
-            case ENOTSOCK:
-                log(LogLevel::WARN, "-- ENOTSOCK");
-                break;
-            case EOPNOTSUPP:
-                log(LogLevel::WARN, "-- EOPNOTSUPP");
-                break;
-            case ENOBUFS:
-                log(LogLevel::WARN, "-- ENOBUFS");
-                break;
-            case ENOMEM:
-                log(LogLevel::WARN, "-- ENOMEM");
-                break;
-            case EPROTO:
-                log(LogLevel::WARN, "-- EPROTO");
-                break;
-            default:
-                log(LogLevel::WARN, "-- EUNKNOWN");
-                break;
-            }
+        tcp::iostream stream;
+        boost::system::error_code error;
+        acceptor.accept(*stream.rdbuf(), error);
+        
+        if (error) {
             continue;
         }
-
-        string ipaddr{ inet_ntoa(client.sin_addr) };
+        string ipaddr = stream.socket().remote_endpoint().address().to_string();
         log(LogLevel::ALERT, string("accepted a client: ") + ipaddr);
 
         if (0 == fork()) {
             log(LogLevel::ALERT, "calling handle_client");
-            handle_client(client_sock);
-            if (-1 == close(client_sock)) {
-                log(LogLevel::WARN, string("Could not close client: ") + ipaddr);
-                switch (errno) {
-                case EBADF:
-                    log(LogLevel::WARN, "-- EBADF");
-                    break;
-                case EINTR:
-                    log(LogLevel::WARN, "-- EINTR");
-                    break;
-                case EIO:
-                    log(LogLevel::WARN, "-- EIO");
-                    break;
-                }
-            } else {
-                log(LogLevel::ALERT, string("closed client ") + ipaddr);
-            }
+            handle_client(stream);
             return 0;
-        } else {
-            if (-1 == close(client_sock)) {
-                log(LogLevel::WARN, string("Parent could not close client: ") + ipaddr);
-                switch (errno) {
-                case EBADF:
-                    log(LogLevel::WARN, "-- EBADF");
-                    break;
-                case EINTR:
-                    log(LogLevel::WARN, "-- EINTR");
-                    break;
-                case EIO:
-                    log(LogLevel::WARN, "-- EIO");
-                    break;
-                }
-            }
         }
     }
 

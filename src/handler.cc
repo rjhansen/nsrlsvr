@@ -14,151 +14,145 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#include "main.h"
-#include <iostream>
 #include <algorithm>
-#include <exception>
-#include <vector>
-#include <sstream>
 #include <boost/tokenizer.hpp>
+#include <exception>
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include "main.h"
 
-using std::string;
-using std::transform;
-using std::vector;
-using std::exception;
-using std::binary_search;
-using std::pair;
-using std::back_inserter;
-using std::getline;
-using std::stringstream;
-using std::to_string;
-using boost::asio::ip::tcp;
 using boost::char_separator;
 using boost::tokenizer;
+using boost::asio::ip::tcp;
+using std::back_inserter;
+using std::binary_search;
+using std::exception;
+using std::getline;
+using std::pair;
+using std::string;
+using std::stringstream;
+using std::to_string;
+using std::transform;
+using std::vector;
 
 // defined in main.cc
 extern const vector<pair64>& hashes;
 
 namespace {
 enum class Command {
-    Version = 0,
-    Bye = 1,
-    Status = 2,
-    Query = 3,
-    Upshift = 4,
-    Downshift = 5,
-    Unknown = 6
+  Version = 0,
+  Bye = 1,
+  Status = 2,
+  Query = 3,
+  Upshift = 4,
+  Downshift = 5,
+  Unknown = 6
 };
 
-auto tokenize(const string& line)
-{
-    vector<string> rv;
-    char_separator<char> sep(" ");
-    tokenizer<char_separator<char>> tokens(line, sep);
-    for (const auto& t : tokens) {
-        rv.emplace_back(t);
-    }
-    return rv;
+auto tokenize(const string& line) {
+  vector<string> rv;
+  char_separator<char> sep(" ");
+  tokenizer<char_separator<char>> tokens(line, sep);
+  for (const auto& t : tokens) {
+    rv.emplace_back(t);
+  }
+  return rv;
 }
 
-bool is_present_in_hashes(const string& hash)
-{
-    return binary_search(hashes.cbegin(), hashes.cend(), to_pair64(hash));
+bool is_present_in_hashes(const string& hash) {
+  return binary_search(hashes.cbegin(), hashes.cend(), to_pair64(hash));
 }
 
-auto getCommand(const string& cmdstring)
-{
-    string localcmd = "";
-    transform(cmdstring.cbegin(), cmdstring.cend(), back_inserter(localcmd), ::toupper);
+auto getCommand(const string& cmdstring) {
+  string localcmd = "";
+  transform(cmdstring.cbegin(), cmdstring.cend(), back_inserter(localcmd),
+            ::toupper);
 
-    auto cmd = Command::Unknown;
+  auto cmd = Command::Unknown;
 
-    if (localcmd == "VERSION:")
-        cmd = Command::Version;
-    else if (localcmd == "BYE")
-        cmd = Command::Bye;
-    else if (localcmd == "STATUS")
-        cmd = Command::Status;
-    else if (localcmd == "QUERY")
-        cmd = Command::Query;
-    else if (localcmd == "UPSHIFT")
-        cmd = Command::Upshift;
-    else if (localcmd == "DOWNSHIFT")
-        cmd = Command::Downshift;
-    
-    return cmd;
+  if (localcmd == "VERSION:")
+    cmd = Command::Version;
+  else if (localcmd == "BYE")
+    cmd = Command::Bye;
+  else if (localcmd == "STATUS")
+    cmd = Command::Status;
+  else if (localcmd == "QUERY")
+    cmd = Command::Query;
+  else if (localcmd == "UPSHIFT")
+    cmd = Command::Upshift;
+  else if (localcmd == "DOWNSHIFT")
+    cmd = Command::Downshift;
+
+  return cmd;
 }
-}
+}  // namespace
 
-void handle_client(tcp::iostream& stream)
-{
-    const string ipaddr = stream.socket().remote_endpoint().address().to_string();
-    unsigned long long queries = 0;
-    try {
-        while (stream) {
-            string line;
-            getline(stream, line);
-            if (line.size() == 0) return;
+void handle_client(tcp::iostream& stream) {
+  const string ipaddr = stream.socket().remote_endpoint().address().to_string();
+  unsigned long long queries = 0;
+  try {
+    while (stream) {
+      string line;
+      getline(stream, line);
+      if (line.size() == 0) return;
 
-            // trim leading/following whitespace
-            auto end_ws = line.find_last_not_of("\t\n\v\f\r ");
-            if (end_ws != string::npos) {
-                line.erase(end_ws + 1);
-            }
-            auto front_ws = line.find_first_not_of("\t\n\v\f\r ");
-            if (front_ws > 0) {
-                line.erase(0, front_ws);
-            }
+      // trim leading/following whitespace
+      auto end_ws = line.find_last_not_of("\t\n\v\f\r ");
+      if (end_ws != string::npos) {
+        line.erase(end_ws + 1);
+      }
+      auto front_ws = line.find_first_not_of("\t\n\v\f\r ");
+      if (front_ws > 0) {
+        line.erase(0, front_ws);
+      }
 
-            auto commands = tokenize(line);
-            switch (getCommand(commands.at(0))) {
-            case Command::Version:
-                stream << "OK\r\n";
-                break;
+      auto commands = tokenize(line);
+      switch (getCommand(commands.at(0))) {
+        case Command::Version:
+          stream << "OK\r\n";
+          break;
 
-            case Command::Bye:
-                return;
+        case Command::Bye:
+          return;
 
-            case Command::Status:
-                stream << "NOT SUPPORTED\r\n";
-                break;
+        case Command::Status:
+          stream << "NOT SUPPORTED\r\n";
+          break;
 
-            case Command::Query:
-            {
-                stringstream rv;
-                rv << "OK ";
-                for (size_t idx = 1 ; idx < commands.size(); ++idx)
-                    rv << (is_present_in_hashes(commands.at(idx)) ? "1" : "0");
-                rv << "\r\n";
-                queries += (commands.size() - 1);
-                stream << rv.str();
-                break;
-            }
-
-            case Command::Upshift:
-                stream << "NOT OK\r\n";
-                break;
-
-            case Command::Downshift:
-                stream << "NOT OK\r\n";
-                break;
-
-            case Command::Unknown:
-                stream << "NOT OK\r\n";
-                return;
-            }
+        case Command::Query: {
+          stringstream rv;
+          rv << "OK ";
+          for (size_t idx = 1; idx < commands.size(); ++idx)
+            rv << (is_present_in_hashes(commands.at(idx)) ? "1" : "0");
+          rv << "\r\n";
+          queries += (commands.size() - 1);
+          stream << rv.str();
+          break;
         }
-    }
-    catch (std::exception& e) {
-        log(LogLevel::ALERT, string("Error: ") + e.what());
-        // swallow the exception: we'll close the connection
-        // automagically on exit
-        //
-        // fall-through here to function returb
-    }
 
-    stringstream status_msg;
-    status_msg << ipaddr << " closed session after " << queries
-        << " queries";
-    log(LogLevel::ALERT, status_msg.str());
+        case Command::Upshift:
+          stream << "NOT OK\r\n";
+          break;
+
+        case Command::Downshift:
+          stream << "NOT OK\r\n";
+          break;
+
+        case Command::Unknown:
+          stream << "NOT OK\r\n";
+          return;
+      }
+    }
+  } catch (std::exception& e) {
+    log(LogLevel::ALERT, string("Error: ") + e.what());
+    // swallow the exception: we'll close the connection
+    // automagically on exit
+    //
+    // fall-through here to function returb
+  }
+
+  stringstream status_msg;
+  status_msg << ipaddr << " closed session after " << queries << " queries";
+  log(LogLevel::ALERT, status_msg.str());
 }

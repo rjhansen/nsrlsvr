@@ -17,18 +17,17 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #ifndef MAIN_H
 #define MAIN_H
 
-#include <utility>
-#include <string>
 #include <syslog.h>
-#include <cstdint>
 #include <boost/asio.hpp>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 // Note: C++11 guarantees an unsigned long long will be at least 64 bits.
 // A compile-time assert in main.cc guarantees it will ONLY be 64 bits.
 using pair64 = std::pair<unsigned long long, unsigned long long>;
 
-enum class LogLevel
-{
+enum class LogLevel {
   INFO = LOG_INFO,
   WARN = LOG_WARNING,
   DEBUG = LOG_DEBUG,

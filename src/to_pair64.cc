@@ -14,65 +14,55 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#include "main.h"
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
-#include <stdexcept>
 #include <regex>
 #include <sstream>
-#include <iomanip>
+#include <stdexcept>
+#include "main.h"
 
-using std::pair;
-using std::string;
+using std::hex;
+using std::invalid_argument;
 using std::make_pair;
+using std::pair;
 using std::regex;
 using std::regex_match;
-using std::invalid_argument;
-using std::stringstream;
-using std::setw;
 using std::setfill;
-using std::hex;
+using std::setw;
+using std::string;
+using std::stringstream;
 
-string
-from_pair64(const pair64& input)
-{
-    stringstream stream;
-    stream << setfill('0') 
-        << setw(sizeof(unsigned long long) * 2)
-        << hex
-        << input.first
-        << input.second;
-    return string(stream.str());
+string from_pair64(const pair64& input) {
+  stringstream stream;
+  stream << setfill('0') << setw(sizeof(unsigned long long) * 2) << hex
+         << input.first << input.second;
+  return string(stream.str());
 }
 
-pair64
-to_pair64(const string& input)
-{
-    static const regex md5_re{ "^[A-Fa-f0-9]{32}$" };
+pair64 to_pair64(const string& input) {
+  static const regex md5_re{"^[A-Fa-f0-9]{32}$"};
 
-    if (!regex_match(input.cbegin(), input.cend(), md5_re))
-        throw invalid_argument("not a hash");
-    
-    auto first = string(input.cbegin(), input.cbegin() + 16);
-    auto second = string(input.cbegin() + 16, input.cend());    
-    auto left = std::strtoull(first.c_str(), nullptr, 16);
-    auto right = std::strtoull(second.c_str(), nullptr, 16);
+  if (!regex_match(input.cbegin(), input.cend(), md5_re))
+    throw invalid_argument("not a hash");
 
-    return make_pair(left, right);
+  auto first = string(input.cbegin(), input.cbegin() + 16);
+  auto second = string(input.cbegin() + 16, input.cend());
+  auto left = std::strtoull(first.c_str(), nullptr, 16);
+  auto right = std::strtoull(second.c_str(), nullptr, 16);
+
+  return make_pair(left, right);
 }
 
-bool operator<(const pair64& lhs, const pair64& rhs)
-{
-    return (lhs.first < rhs.first) or
-        (lhs.first == rhs.first and lhs.second < rhs.second);
+bool operator<(const pair64& lhs, const pair64& rhs) {
+  return (lhs.first < rhs.first) or
+         (lhs.first == rhs.first and lhs.second < rhs.second);
 }
 
-bool operator==(const pair64& lhs, const pair64& rhs)
-{
-    return (lhs.first == rhs.first) and (lhs.second == rhs.second);
+bool operator==(const pair64& lhs, const pair64& rhs) {
+  return (lhs.first == rhs.first) and (lhs.second == rhs.second);
 }
 
-bool operator>(const pair64& lhs, const pair64& rhs)
-{
-    return ((!(lhs < rhs)) and (!(lhs == rhs)));
+bool operator>(const pair64& lhs, const pair64& rhs) {
+  return ((!(lhs < rhs)) and (!(lhs == rhs)));
 }

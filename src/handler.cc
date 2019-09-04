@@ -149,7 +149,7 @@ void handle_client(tcp::iostream& stream) {
     // swallow the exception: we'll close the connection
     // automagically on exit
     //
-    // fall-through here to function returb
+    // fall-through here to function return
   }
 
   stringstream status_msg;

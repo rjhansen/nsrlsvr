@@ -70,10 +70,10 @@ void load_hashes() {
   uint32_t hash_count{0};
   ifstream infile{hashes_location.c_str()};
 
-  // As of this writing, the full RDS had about 75 million entries.
+  // As of this writing, the full RDS had about 81 million entries.
   // When a vector needs to grow, it normally does so by doubling
   // the former allocation -- so after this, the next stop is a
-  // 100 million allocation (@ 16 bytes per, or 1.6 GB).  If you're
+  // 200 million allocation (@ 16 bytes per, or 3.2 GB).  If you're
   // maintaining this code, try to keep the reserve a few million
   // larger than the RDS currently is, to give yourself room to
   // grow without a vector realloc.
@@ -82,7 +82,7 @@ void load_hashes() {
   // Don't even try.  Just log the error and bail out.  Let the end
   // user worry about installing more RAM.
   try {
-    hash_set.reserve(75000000);
+    hash_set.reserve(100000000);
   } catch (std::bad_alloc&) {
     log(LogLevel::ALERT, "couldn't reserve enough memory");
     exit(EXIT_FAILURE);

@@ -318,8 +318,8 @@ int main(int argc, char* argv[]) {
     if (error) {
       continue;
     }
-    string ipaddr = stream.socket().remote_endpoint().address().to_string();
-    log(LogLevel::ALERT, string("accepted a client: ") + ipaddr);
+    // string ipaddr = stream.socket().remote_endpoint().address().to_string();
+    // log(LogLevel::ALERT, string("accepted a client: ") + ipaddr);
 
     if (0 == fork()) {
       log(LogLevel::ALERT, "calling handle_client");

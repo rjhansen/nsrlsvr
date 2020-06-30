@@ -91,7 +91,7 @@ auto getCommand(const string& cmdstring) {
 }  // namespace
 
 void handle_client(tcp::iostream& stream) {
-  const string ipaddr = stream.socket().remote_endpoint().address().to_string();
+  // const string ipaddr = stream.socket().remote_endpoint().address().to_string();
   unsigned long long queries = 0;
   try {
     bool byebye = false;
@@ -155,6 +155,6 @@ void handle_client(tcp::iostream& stream) {
   }
 
   stringstream status_msg;
-  status_msg << ipaddr << " closed session after " << queries << " queries";
+  // status_msg << ipaddr << " closed session after " << queries << " queries";
   log(LogLevel::ALERT, status_msg.str());
 }

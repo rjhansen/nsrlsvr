@@ -309,6 +309,7 @@ int main(int argc, char* argv[]) {
   boost::asio::io_service io_service;
   tcp::endpoint endpoint(tcp::v6(), port);
   tcp::acceptor acceptor(io_service, endpoint);
+  acceptor.set_option(boost::asio::ip::v6_only(false));
 
   while (true) {
     tcp::iostream stream;

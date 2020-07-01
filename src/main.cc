@@ -307,9 +307,16 @@ int main(int argc, char* argv[]) {
   if (dry_run) return EXIT_SUCCESS;
 
   boost::asio::io_service io_service;
-  tcp::endpoint endpoint(tcp::v6(), port);
-  tcp::acceptor acceptor(io_service, endpoint);
-  acceptor.set_option(boost::asio::ip::v6_only(false));
+  const char* listen_address = "::";
+  boost::asio::ip::address address = boost::asio::ip::address::from_string(listen_address);
+  tcp::endpoint endpoint(address, port);
+  tcp::acceptor acceptor(io_service, endpoint.protocol());
+  if (endpoint.protocol() == tcp::v6()) {
+    boost::system::error_code ec;
+    acceptor.set_option(boost::asio::ip::v6_only(false), ec);
+  }
+  acceptor.bind(endpoint);
+  acceptor.listen();
 
   while (true) {
     tcp::iostream stream;

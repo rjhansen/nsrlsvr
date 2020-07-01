@@ -307,7 +307,7 @@ int main(int argc, char* argv[]) {
   if (dry_run) return EXIT_SUCCESS;
 
   boost::asio::io_service io_service;
-  tcp::endpoint endpoint(tcp::v4(), port);
+  tcp::endpoint endpoint(tcp::v6(), port);
   tcp::acceptor acceptor(io_service, endpoint);
 
   while (true) {

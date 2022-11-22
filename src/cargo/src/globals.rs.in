@@ -1,0 +1,12 @@
+#[allow(dead_code)]
+pub const PKGDATADIR: &str = "@pkgdatadir@";
+#[allow(dead_code)]
+pub const PREFIX: &str = "@prefix@";
+#[allow(dead_code)]
+pub const PACKAGE_NAME: &str = "@PACKAGE_NAME@";
+#[allow(dead_code)]
+pub const PACKAGE_VERSION: &str = "@PACKAGE_VERSION@";
+#[allow(dead_code)]
+pub const PACKAGE_URL: &str = "@PACKAGE_URL@";
+#[allow(dead_code)]
+pub const PACKAGE_BUGREPORT: &str = "@PACKAGE_BUGREPORT@";

@@ -8,3 +8,6 @@ description = "nsrlsvr serves up MD5 hashes from the NIST NSRL RDS."
 
 [dependencies]
 clap = { version = "4.0.26", features = ["derive"] }
+env_logger = { version = "0.9.3" }
+log = { version = "0.4.17" }
+regex = { version = "1.7.0" }
